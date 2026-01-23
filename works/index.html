@@ -42,23 +42,32 @@ a { color:#111; text-decoration:none; }
 }
 
 .button-link {
-  display:inline-flex;       /* 中央揃え対応 */
+  display:inline-flex;
   justify-content:center;
   align-items:center;
-  padding:0;                /* paddingは0で高さ固定 */
-  height:60px;              /* PCボタン高さ */
-  background:#111; 
-  color:#fff; 
-  text-decoration:none; 
-  font-weight:500; 
-  border-radius:8px; 
-  width:220px;       
-  text-align:center; 
+  padding:0;
+  height:60px;           /* PC高さ */
+  width:220px;
+  background:#111;
+  color:#fff;
+  text-decoration:none;
+  font-weight:500;
+  border-radius:8px;
+  text-align:center;
+  cursor:pointer;        /* クリック可能を明示 */
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease; /* 押下エフェクト */
+}
+
+/* 押した時のアニメーション */
+.button-link:active {
+  transform: scale(0.95);            /* 少し縮む */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* 奥行き感 */
+  background:#222;                   /* 少し色を変える */
 }
 
 /* HOMEボタン専用下余白 */
 .home-button-container {
-  margin-bottom:120px; /* HOMEボタン下余白 */
+  margin-bottom:180px;  /* 下余白大きめ */
 }
 
 /* スマホ版 */
@@ -71,9 +80,9 @@ a { color:#111; text-decoration:none; }
 
   .button-container { align-items:center; }
   .button-link {
-    width:80%;        /* スマホ幅80% */
+    width:80%;
     max-width:300px;
-    height:80px;      /* 高さ大きめ */
+    height:80px;       /* 高さ大きめ */
   }
 }
 </style>
@@ -224,6 +233,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
