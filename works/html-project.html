@@ -27,7 +27,6 @@ canvas {
   padding-left:10vw; padding-top:9vh; color:#111; 
 }
 h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
-.subtitle { margin-top:10px; font-weight:400; letter-spacing:0.15em; font-size:0.9rem; }
 .section { margin-top:60px; font-size:0.75rem; letter-spacing:0.2em; }
 
 .button-container {
@@ -52,10 +51,14 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   cursor:pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
   font-size:1rem;
+  position:relative;
 }
 .button-link::after {
-  content:"click";
+  content:"Click";
   color:white;
+  position:absolute;
+  top:50%; left:50%;
+  transform: translate(-50%, -50%);
 }
 .button-link:active {
   transform: scale(0.95);
@@ -73,14 +76,14 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 @media (max-width:768px){
   .content { padding-left:5vw; padding-top:15vh; }
   h1 { font-size:3rem; }
-  .subtitle { font-size:1.2rem; }
-  .section { font-size:1rem; }
 
-  /* ボタンは中央寄せ */
+  /* ボタンは中央揃え（ただし戻るは上揃え） */
   .button-container:not(.two-buttons) { align-items:center; }
 
-  /* 戻るテキストは上揃え */
-  .button-container.two-buttons { align-items:flex-start; gap:24px; }
+  .button-container.two-buttons { 
+    align-items:flex-start; 
+    gap:24px; 
+  }
 
   /* 戻るボタン下余白を広げる */
   .section .button-container.last { margin-bottom:60px; }
@@ -95,7 +98,6 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 
   <!-- ページタイトル -->
   <h1>HTML</h1>
-  <div class="subtitle">仮組みページ</div>
 
   <!-- 20260123① -->
   <div class="section">
@@ -204,6 +206,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
