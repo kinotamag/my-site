@@ -12,7 +12,7 @@ body{
   margin:0;
   background:white;
   font-family:'Inter',sans-serif;
-  overflow:hidden; /* スクロール防止 */
+  overflow:hidden;
 
   -webkit-user-select:none;
   -moz-user-select:none;
@@ -22,7 +22,7 @@ body{
 
 *{
   -webkit-user-drag:none;
-  touch-action:none; /* タッチ時のスクロール無効 */
+  touch-action:none;
 }
 
 canvas{
@@ -86,6 +86,31 @@ h1{
 .control-btn:hover{
   opacity:0.6;
 }
+
+/* ===== スマホ対応 ===== */
+@media (max-width: 768px){
+  .content{
+    padding-top:15vh; /* タイトル下余白増 */
+    padding-left:5vw;
+  }
+  h1{
+    font-size:3rem;
+  }
+  .subtitle{
+    font-size:1.2rem;
+  }
+  .section{
+    font-size:1rem;
+  }
+  .item{
+    font-size:1.2rem;
+    margin-top:18px;
+  }
+  .control-btn{
+    font-size:1rem;
+    margin-top:50px;
+  }
+}
 </style>
 </head>
 <body>
@@ -109,6 +134,7 @@ h1{
 </div>
 
 <script>
+/* ===== FREEZE ===== */
 function saveImage(){
   html2canvas(document.body).then(canvasImage=>{
     const link=document.createElement("a");
@@ -118,12 +144,14 @@ function saveImage(){
   });
 }
 
+/* ===== RESET ===== */
 function resetCanvas(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawCount=0;
   points=[];
 }
 
+/* ===== 背景アニメーション ===== */
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 
@@ -147,24 +175,25 @@ let drawCount=0;
 const maxDraw=450;
 
 /* ===== PC ===== */
-window.addEventListener("mousemove",e=>{
+window.addEventListener("mousemove", e=>{
   mouse.x=e.clientX;
   mouse.y=e.clientY;
 });
 
 /* ===== スマホ ===== */
-window.addEventListener("touchstart",e=>{
+window.addEventListener("touchstart", e=>{
+  mouse.x=e.touches[0].clientX;
+  mouse.y=e.touches[0].clientY;
+});
+window.addEventListener("touchmove", e=>{
   mouse.x=e.touches[0].clientX;
   mouse.y=e.touches[0].clientY;
 });
 
-window.addEventListener("touchmove",e=>{
-  mouse.x=e.touches[0].clientX;
-  mouse.y=e.touches[0].clientY;
-});
+/* ===== 軽量化 ===== */
+const maxPoints=10;  // ポイント数減らしてスマホ軽量化
 
 function draw(){
-
   pen.x+=(mouse.x-pen.x)*ease;
   pen.y+=(mouse.y-pen.y)*ease;
 
@@ -176,11 +205,11 @@ function draw(){
   if(targetWidth<minWidth) targetWidth=minWidth;
   width+=(targetWidth-width)*0.2;
 
-  points.push({x:pen.x,y:pen.y,w:width});
-  if(points.length>20) points.shift();
+  points.push({x:pen.x, y:pen.y, w:width});
+  if(points.length>maxPoints) points.shift();
 
-  if(points.length>=4){
-    for(let i=0;i<points.length-3;i++){
+  if(points.length>=2){
+    for(let i=0;i<points.length-1;i++){
       const p1=points[i+1];
 
       ctx.beginPath();
@@ -190,7 +219,7 @@ function draw(){
       const w=p1.w*(1-i/points.length*0.6);
       ctx.lineWidth=w;
 
-      const shade=Math.floor(Math.random()*8);
+      const shade=Math.floor(Math.random()*6); // 軽め
       ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
 
       ctx.lineCap="round";
@@ -200,6 +229,7 @@ function draw(){
     }
   }
 
+  // 蓄積量に応じて徐々に薄く
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -212,9 +242,9 @@ function draw(){
 }
 
 draw();
-
-window.addEventListener("resize",resize);
+window.addEventListener("resize", resize);
 </script>
 
 </body>
 </html>
+
