@@ -5,14 +5,18 @@
 <title>Your Site</title>
 
 <style>
-body {
+body{
   margin:0;
   background:white;
   font-family:sans-serif;
+
+  /* テキスト選択禁止 */
+  user-select:none;
+  -webkit-user-select:none;
 }
 
 /* 背景canvas */
-canvas {
+canvas{
   position:fixed;
   top:0;
   left:0;
@@ -20,15 +24,30 @@ canvas {
 }
 
 /* 前面コンテンツ */
-.content {
+.content{
   position:relative;
   z-index:1;
   padding:120px 10%;
 }
 
-section {
+section{
   margin-bottom:400px;
   font-size:24px;
+}
+
+/* コピーボタン */
+button{
+  padding:10px 20px;
+  font-size:16px;
+  border:none;
+  background:black;
+  color:white;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+button:hover{
+  opacity:0.7;
 }
 </style>
 </head>
@@ -51,7 +70,8 @@ section {
 
   <section>
     <h2>Contact</h2>
-    <p>mail@example.com</p>
+    <p id="emailText">yourmail@gmail.com</p>
+    <button onclick="copyEmail(event)">Copy Email</button>
   </section>
 </div>
 
@@ -75,7 +95,7 @@ const maxWidth = 25;
 const minWidth = 0.5;
 let width = maxWidth;
 
-window.addEventListener("mousemove", e => {
+window.addEventListener("mousemove", e=>{
   mouse.x = e.clientX;
   mouse.y = e.clientY;
 });
@@ -137,9 +157,22 @@ function draw(){
 
   requestAnimationFrame(draw);
 }
-
 draw();
+
+/* メールコピーボタン */
+function copyEmail(e){
+  const email = document.getElementById("emailText").innerText;
+  const btn = e.target;
+
+  navigator.clipboard.writeText(email).then(()=>{
+    btn.innerText = "Copied";
+    setTimeout(()=>{
+      btn.innerText = "Copy Email";
+    },1500);
+  });
+}
 </script>
 
 </body>
 </html>
+
