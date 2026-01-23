@@ -12,10 +12,7 @@ body{
   margin:0;
   font-family:'Inter',sans-serif;
   user-select:none;
-  -webkit-user-select:none;
-  -moz-user-select:none;
-  -ms-user-select:none;
-  overflow:hidden; /* スクロールなし */
+  overflow:hidden;
 }
 
 canvas{
@@ -76,7 +73,6 @@ h1{
   opacity:0.6;
 }
 
-/* スマホ用 */
 @media (max-width:768px){
   .content{
     padding-top:8vh;
@@ -111,68 +107,31 @@ h1{
 </div>
 
 <script>
-/* ===== 保存 ===== */
-function saveImage(){
-  html2canvas(document.body).then(canvasImage=>{
-    const link=document.createElement("a");
-    link.download="trail.png";
-    link.href=canvasImage.toDataURL();
-    link.click();
-  });
-}
-
-/* ===== リセット ===== */
-function resetCanvas(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawCount=0;
-  points=[];
-}
-
-/* ===== canvas 初期化 ===== */
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 
 function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
 }
 resize();
 window.addEventListener("resize",resize);
 
-/* ===== 描画データ ===== */
 let mouse={x:canvas.width/2,y:canvas.height/2};
-let pen={x:mouse.x, y:mouse.y};
-let lastPen={x:pen.x, y:pen.y};
-
-const ease=0.3;
-const maxWidth=25;
-const minWidth=0.5;
-let width=maxWidth;
+let pen={x:mouse.x,y:mouse.y};
+let lastPen={x:pen.x,y:pen.y};
+let width=25;
 
 let points=[];
 let drawCount=0;
 const maxDraw=600;
-
-/* ===== 補間関数 ===== */
-function interpolatePoints(p0,p1,segments){
-  const arr=[];
-  for(let i=0;i<segments;i++){
-    const t=i/segments;
-    arr.push({x:p0.x+(p1.x-p0.x)*t, y:p0.y+(p1.y-p0.y)*t});
-  }
-  return arr;
-}
-
-/* ===== 描画制御 ===== */
 let isDrawing=false;
 
-/* マウス */
-window.addEventListener("mousemove", e=>{
-  mouse.x=e.clientX;
-  mouse.y=e.clientY;
-});
+/* タッチ & マウス */
+window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+window.addEventListener("mousedown", e=>{ isDrawing=true; mouse.x=e.clientX; mouse.y=e.clientY; pen.x=mouse.x; pen.y=mouse.y; lastPen.x=pen.x; lastPen.y=pen.y; });
+window.addEventListener("mouseup", e=>{ isDrawing=false; });
 
-/* タッチ */
 window.addEventListener("touchstart", e=>{
   if(e.touches.length===1){
     isDrawing=true;
@@ -180,11 +139,9 @@ window.addEventListener("touchstart", e=>{
     mouse.y=e.touches[0].clientY;
     pen.x=mouse.x;
     pen.y=mouse.y;
-    lastPen.x=mouse.x;
-    lastPen.y=mouse.y;
-  } else {
-    isDrawing=false;
-  }
+    lastPen.x=pen.x;
+    lastPen.y=pen.y;
+  } else isDrawing=false;
 });
 
 window.addEventListener("touchmove", e=>{
@@ -192,72 +149,114 @@ window.addEventListener("touchmove", e=>{
     mouse.x=e.touches[0].clientX;
     mouse.y=e.touches[0].clientY;
   }
-  e.preventDefault(); // **スクロール完全無効**
-}, {passive:false});
+  e.preventDefault();
+},{passive:false});
 
-window.addEventListener("touchend", e=>{
-  if(e.touches.length===0) isDrawing=false;
-});
+window.addEventListener("touchend", e=>{ if(e.touches.length===0) isDrawing=false; });
 
-/* ===== 描画ループ ===== */
-function draw(){
-  // pen追従
-  pen.x += (mouse.x - pen.x) * ease;
-  pen.y += (mouse.y - pen.y) * ease;
-
-  const dx = pen.x - lastPen.x;
-  const dy = pen.y - lastPen.y;
-  const speed = Math.sqrt(dx*dx + dy*dy);
-
-  let targetWidth=maxWidth-Math.pow(speed*1.3,0.85);
-  if(targetWidth<minWidth) targetWidth=minWidth;
-  width += (targetWidth - width)*0.2;
-
-  points.push({x:pen.x,y:pen.y,w:width});
-  if(points.length>8) points.shift();
-
-  if(points.length>=2){
-    for(let i=0;i<points.length-1;i++){
-      const p0=points[i];
-      const p1=points[i+1];
-
-      const interp=interpolatePoints(p0,p1,4);
-      interp.forEach((pt,idx)=>{
-        const next = interp[idx+1] || p1;
-        ctx.beginPath();
-        ctx.moveTo(pt.x,pt.y);
-        ctx.lineTo(next.x,next.y);
-
-        const w = p0.w*(1-i/points.length*0.6);
-        ctx.lineWidth=w;
-
-        const shade = Math.floor(Math.random()*12);
-        ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
-
-        ctx.lineCap="round";
-        ctx.stroke();
-
-        drawCount++;
-      });
-    }
+/* 補間 */
+function interpolate(p0,p1,seg){
+  const arr=[];
+  for(let i=0;i<seg;i++){
+    const t=i/seg;
+    arr.push({x:p0.x+(p1.x-p0.x)*t, y:p0.y+(p1.y-p0.y)*t});
   }
+  return arr;
+}
 
-  if(drawCount>maxDraw){
-    ctx.fillStyle="rgba(255,255,255,0.008)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+/* 描画ループ */
+function draw(){
+  if(isDrawing){
+    const ease=0.3;
+    pen.x += (mouse.x-pen.x)*ease;
+    pen.y += (mouse.y-pen.y)*ease;
+
+    const dx=pen.x-lastPen.x;
+    const dy=pen.y-lastPen.y;
+    const speed=Math.sqrt(dx*dx+dy*dy);
+
+    let targetWidth=25-Math.pow(speed*1.3,0.85);
+
+    // PCは筆圧的に強いともっと太く
+    if(window.innerWidth>768) targetWidth*=1.2;
+
+    if(targetWidth<0.5) targetWidth=0.5;
+    width+=(targetWidth-width)*0.2;
+
+    points.push({x:pen.x,y:pen.y,w:width});
+    if(points.length>8) points.shift();
+
+    if(points.length>=2){
+      for(let i=0;i<points.length-1;i++){
+        const p0=points[i];
+        const p1=points[i+1];
+        const interp=interpolate(p0,p1,4);
+        interp.forEach((pt,idx)=>{
+          const next=interp[idx+1]||p1;
+          ctx.beginPath();
+          ctx.moveTo(pt.x,pt.y);
+          ctx.lineTo(next.x,next.y);
+          const w=p0.w*(1-i/points.length*0.6);
+          ctx.lineWidth=w;
+          const shade=Math.floor(Math.random()*12);
+          ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
+          ctx.lineCap="round";
+          ctx.stroke();
+          drawCount++;
+        });
+      }
+    }
+
+    if(drawCount>maxDraw){
+      ctx.fillStyle="rgba(255,255,255,0.008)";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
   }
 
   lastPen.x=pen.x;
   lastPen.y=pen.y;
-
   requestAnimationFrame(draw);
 }
-
 draw();
+
+/* RESET */
+function resetCanvas(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawCount=0;
+  points=[];
+}
+
+/* FREEZE - 描画範囲のみキャプチャ */
+function saveImage(){
+  if(points.length===0) return;
+  // 描画範囲取得
+  let minX=canvas.width, minY=canvas.height, maxX=0, maxY=0;
+  points.forEach(p=>{
+    if(p.x<minX) minX=p.x;
+    if(p.y<minY) minY=p.y;
+    if(p.x>maxX) maxX=p.x;
+    if(p.y>maxY) maxY=p.y;
+  });
+  const padding=20; // 少し余白
+  minX=Math.max(0,minX-padding);
+  minY=Math.max(0,minY-padding);
+  maxX=Math.min(canvas.width,maxX+padding);
+  maxY=Math.min(canvas.height,maxY+padding);
+  const w=maxX-minX;
+  const h=maxY-minY;
+
+  html2canvas(canvas, {width:w, height:h, x:minX, y:minY}).then(c=>{
+    const link=document.createElement("a");
+    link.download="trail.png";
+    link.href=c.toDataURL();
+    link.click();
+  });
+}
 </script>
 
 </body>
 </html>
+
 
 
 
