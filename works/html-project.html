@@ -31,6 +31,13 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-al
 
 .section { margin-top:60px; font-size:0.75rem; letter-spacing:0.2em; text-align:left; }
 
+.section-title {
+  margin-bottom:8px;
+  font-size:0.75rem;
+  letter-spacing:0.2em;
+  text-align:left;
+}
+
 .button-container {
   display:flex; flex-direction:column;
   gap:16px;
@@ -87,7 +94,7 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-al
     padding-left:5vw;
     display:flex;
     flex-direction:column;
-    align-items:flex-start; /* テキストは左揃え */
+    align-items:flex-start; /* テキスト左揃え */
   }
 
   h1{ font-size:3rem; text-align:left; }
@@ -95,7 +102,13 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-al
   .section{
     font-size:1rem;
     width:100%;
-    text-align:left;
+    text-align:left;  /* テキスト左揃え */
+  }
+
+  .section-title{
+    font-size:1rem;
+    text-align:left;  /* 上揃え・左揃え */
+    margin-bottom:16px;
   }
 
   .button-container{
@@ -124,7 +137,7 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-al
 
   <!-- 20260123① -->
   <div class="section">
-    20260123①
+    <div class="section-title">20260123①</div>
     <div class="button-container">
       <a href="20260123-1.html" class="button-link"></a>
     </div>
@@ -132,12 +145,12 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-al
 
   <!-- 20260123② -->
   <div class="section">
-    20260123②
+    <div class="section-title">20260123②</div>
     <div class="button-container two-buttons">
       <a href="20260123-2.html" class="button-link"></a>
       <!-- 戻る -->
+      <div class="section-title">戻る</div>
       <div class="button-container last">
-        戻る
         <a href="index.html" class="button-link"></a>
       </div>
     </div>
@@ -229,6 +242,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
