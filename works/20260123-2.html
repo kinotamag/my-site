@@ -12,12 +12,11 @@ html,body{
 }
 canvas{display:block}
 
-/* 戻るボタン */
 .control-btn {
   position: fixed;
   top: 20px;
   left: 20px;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: 700;
   background: rgba(255,255,255,0.15);
   border: 2px solid #fff;
@@ -25,15 +24,15 @@ canvas{display:block}
   color: #fff;
   z-index: 2;
   touch-action: manipulation;
-  padding: 16px 28px;
+  padding: 18px 32px;
   border-radius: 6px;
 }
 .control-btn:hover { opacity:0.6; }
 
 @media (max-width:768px){
   .control-btn {
-    font-size: 2rem;
-    padding: 20px 36px;
+    font-size: 2.2rem;
+    padding: 24px 40px;
   }
 }
 </style>
@@ -64,16 +63,14 @@ const BPM_MIN=0,BPM_MAX=200;
 
 const knob={
   x:()=>canvas.width-60,
-  y:()=>canvas.height/2,
   r:isSP?40:20,
   dragging:false,
   hitR:isSP?60:40,
-  _currentY:null  // ドラッグ用現在位置を保持
+  yDisplay:null // 表示用のy座標（ドラッグ中も更新）
 };
 function bpmFactor(){ return bpm/100; }
 
 const bodies=[];
-
 function color(){ return `hsl(${rand(0,360)},${rand(55,100)}%,${rand(40,70)}%)`; }
 
 class Body{
@@ -160,52 +157,43 @@ function collide(){
   }
 }
 
-// ===== ノブ描画（目盛り数字なし） =====
+// ===== ノブ描画（数字なし） =====
 function drawBPMKnob(){
-  const x=knob.x(), y=knob.y();
+  const x=knob.x();
+  if(knob.yDisplay===null) knob.yDisplay=canvas.height/2;
   ctx.strokeStyle="rgba(255,255,255,0.25)";
   ctx.lineWidth=isSP?4:2;
-  ctx.beginPath(); ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
-
-  const t=bpm/BPM_MAX, ky=y+100-t*200;
+  ctx.beginPath(); ctx.moveTo(x,knob.yDisplay-100); ctx.lineTo(x,knob.yDisplay+100); ctx.stroke();
+  const t=bpm/BPM_MAX, ky=knob.yDisplay+100-t*200;
   ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
 }
 
-// ===== マウス・タッチ操作（常に掴める） =====
+// ===== ドラッグ =====
 function startDrag(x,y){
-  const kx=knob.x(), ky=knob.y();
-  if(Math.hypot(x-kx,y-ky)<=knob.hitR) { knob.dragging=true; knob._currentY=y; }
+  const kx=knob.x(), ky=knob.yDisplay;
+  if(Math.hypot(x-kx,y-ky)<=knob.hitR){ knob.dragging=true; moveDrag(y); }
 }
 function moveDrag(y){
-  if(!knob.dragging)return;
+  if(!knob.dragging) return;
   const minY=knob.r+100, maxY=canvas.height-knob.r-100;
   y=Math.max(minY,Math.min(maxY,y));
-  knob._currentY=y;
-  bpm=Math.round(BPM_MAX-((y-(knob.y()-100))/200)*(BPM_MAX-BPM_MIN));
+  knob.yDisplay=y;
+  bpm=Math.round(BPM_MAX-((y-(canvas.height/2-100))/200)*(BPM_MAX-BPM_MIN));
 }
 
-canvas.addEventListener("mousedown",e=>{
-  const r=canvas.getBoundingClientRect();
-  startDrag(e.clientX-r.left,e.clientY-r.top);
-});
+canvas.addEventListener("mousedown",e=>startDrag(e.clientX,e.clientY));
 canvas.addEventListener("touchstart",e=>{
-  if(e.touches.length===1){
-    const r=canvas.getBoundingClientRect();
-    startDrag(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);
-  }
+  if(e.touches.length===1) startDrag(e.touches[0].clientX,e.touches[0].clientY);
 },{passive:false});
 
-addEventListener("mousemove",e=>{ moveDrag(e.clientY-canvas.getBoundingClientRect().top); });
+addEventListener("mousemove",e=>moveDrag(e.clientY));
 addEventListener("touchmove",e=>{
-  if(e.touches.length===1){ e.preventDefault();
-    moveDrag(e.touches[0].clientY-canvas.getBoundingClientRect().top);
-  }
+  if(e.touches.length===1){ e.preventDefault(); moveDrag(e.touches[0].clientY); }
 },{passive:false});
 
 addEventListener("mouseup",()=>knob.dragging=false);
 addEventListener("touchend",()=>knob.dragging=false);
 
-// ===== 生成 =====
 setInterval(()=>{ if(bodies.length<140) bodies.push(new Body()); }, rand(160,360));
 
 function drawWalls(){ ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2;
@@ -229,6 +217,7 @@ loop();
 </script>
 </body>
 </html>
+
 
 
 
