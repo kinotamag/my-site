@@ -15,7 +15,7 @@ body{
   -webkit-user-select:none;
   -moz-user-select:none;
   -ms-user-select:none;
-  overflow:hidden; /* PCはスクロールなし */
+  overflow:hidden; /* スクロールなし */
 }
 
 canvas{
@@ -33,7 +33,7 @@ canvas{
   flex-direction:column;
   justify-content:flex-start;
   padding-left:10vw;
-  padding-top:15vh;
+  padding-top:12vh;
   color:#111;
 }
 
@@ -77,12 +77,8 @@ h1{
 
 /* スマホ用 */
 @media (max-width:768px){
-  body{
-    overflow-y:auto;
-    -webkit-overflow-scrolling: touch;
-  }
   .content{
-    padding-top:12vh;
+    padding-top:8vh;
     padding-left:5vw;
   }
   h1{ font-size:3rem; }
@@ -90,12 +86,6 @@ h1{
   .section{ font-size:1rem; }
   .item{ font-size:1.2rem; margin-top:18px; }
   .control-btn{ font-size:1rem; margin-top:50px; }
-
-  body::after{
-    content:'';
-    display:block;
-    height:1000px; /* スクロール領域 */
-  }
 }
 </style>
 </head>
@@ -143,11 +133,7 @@ const ctx=canvas.getContext("2d");
 
 function resize(){
   canvas.width = window.innerWidth;
-  if(window.innerWidth <= 768){
-    canvas.height = document.body.scrollHeight;
-  } else {
-    canvas.height = window.innerHeight;
-  }
+  canvas.height = window.innerHeight;
 }
 resize();
 window.addEventListener("resize",resize);
@@ -182,7 +168,7 @@ let isDrawing=false;
 /* マウス */
 window.addEventListener("mousemove", e=>{
   mouse.x=e.clientX;
-  mouse.y=e.clientY + window.scrollY;
+  mouse.y=e.clientY;
 });
 
 /* タッチ */
@@ -190,7 +176,7 @@ window.addEventListener("touchstart", e=>{
   if(e.touches.length===1){
     isDrawing=true;
     mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY + window.scrollY;
+    mouse.y=e.touches[0].clientY;
     pen.x=mouse.x;
     pen.y=mouse.y;
     lastPen.x=mouse.x;
@@ -203,7 +189,7 @@ window.addEventListener("touchstart", e=>{
 window.addEventListener("touchmove", e=>{
   if(e.touches.length===1 && isDrawing){
     mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY + window.scrollY;
+    mouse.y=e.touches[0].clientY;
     e.preventDefault(); // 1本指描画はスクロール停止
   }
 });
@@ -271,6 +257,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
