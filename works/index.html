@@ -14,11 +14,11 @@ body {
 }
 * { -webkit-user-drag:none; touch-action:none; }
 canvas { position:fixed; top:0; left:0; z-index:0; }
+
 .content { position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; justify-content:flex-start; padding-left:10vw; padding-top:9vh; color:#111; }
 h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 .subtitle { margin-top:10px; font-weight:400; letter-spacing:0.15em; font-size:0.9rem; }
 .section { margin-top:60px; font-size:0.75rem; letter-spacing:0.2em; }
-.item { margin-top:14px; font-size:1rem; letter-spacing:0.08em; text-decoration:none; color:#111; }
 a { color:#111; text-decoration:none; }
 iframe { margin-top:20px; border:none; }
 @media (max-width: 768px){
@@ -26,7 +26,6 @@ iframe { margin-top:20px; border:none; }
   h1{ font-size:3rem; }
   .subtitle{ font-size:1.2rem; }
   .section{ font-size:1rem; }
-  .item{ font-size:1.2rem; margin-top:18px; }
   iframe { width:100%; height:auto; }
 }
 </style>
@@ -38,17 +37,20 @@ iframe { margin-top:20px; border:none; }
   <div class="subtitle">🥚🥚 🥚</div>
 
   <div class="section">YouTube</div>
-  <!-- kinotamag チャンネルの最新動画埋め込み -->
-  <iframe width="300" height="169" 
-    src="https://www.youtube.com/embed?listType=user_uploads&list=UClLZp4tJ0nB3y3O9rtuEwSA" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
-  </iframe>
+  <div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:flex-start; max-width:800px;">
+    <iframe width="300" height="169" src="https://www.youtube.com/embed/動画ID1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="300" height="169" src="https://www.youtube.com/embed/動画ID2" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="300" height="169" src="https://www.youtube.com/embed/動画ID3" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="300" height="169" src="https://www.youtube.com/embed/動画ID4" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <iframe width="300" height="169" src="https://www.youtube.com/embed/動画ID5" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+  </div>
 
   <div class="section">SoundCloud</div>
-  <!-- kinotamag ユーザーの埋め込みプレイヤー -->
-  <iframe width="100%" height="300" scrolling="no" 
-    src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kinotamag&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true">
-  </iframe>
+  <div style="max-width:800px; width:100%;">
+    <iframe width="100%" height="300" scrolling="no" frameborder="no" 
+      src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kinotamag&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true">
+    </iframe>
+  </div>
 
   <p><a href="../index.html">← Back to Home</a></p>
 </div>
@@ -89,7 +91,6 @@ function draw(){
   points.push({x:pen.x, y:pen.y, w:width});
   if(points.length > 50) points.shift();
 
-  // 軌跡を黒寄りで早めに薄く
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
@@ -127,5 +128,6 @@ draw();
 </script>
 </body>
 </html>
+
 
 
