@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -10,51 +10,64 @@
 <style>
 body{
   margin:0;
+  background:white;
   font-family:'Inter',sans-serif;
-  user-select:none;
   overflow:hidden;
+
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  user-select:none;
+}
+
+*{
+  -webkit-user-drag:none;
+  touch-action:none;
 }
 
 canvas{
   position:fixed;
   top:0;
   left:0;
-  width:100%;
-  height:100%;
   z-index:0;
 }
 
 .content{
   position:relative;
   z-index:1;
+  min-height:100vh;
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
   padding-left:10vw;
-  padding-top:12vh;
+  padding-top:9vh;
   color:#111;
 }
 
 h1{
-  font-size:2.6rem;
+  font-size:2.4rem;
   font-weight:500;
+  letter-spacing:0.12em;
   margin:0;
 }
 
 .subtitle{
   margin-top:10px;
   font-weight:400;
-  font-size:1rem;
+  letter-spacing:0.15em;
+  font-size:0.9rem;
 }
 
 .section{
   margin-top:60px;
-  font-size:0.8rem;
+  font-size:0.75rem;
+  letter-spacing:0.2em;
 }
 
 .item{
   margin-top:14px;
   font-size:1rem;
+  letter-spacing:0.08em;
   text-decoration:none;
   color:#111;
 }
@@ -62,6 +75,7 @@ h1{
 .control-btn{
   margin-top:40px;
   font-size:0.75rem;
+  letter-spacing:0.2em;
   background:none;
   border:none;
   cursor:pointer;
@@ -73,16 +87,29 @@ h1{
   opacity:0.6;
 }
 
-@media (max-width:768px){
+/* ===== スマホ対応 ===== */
+@media (max-width: 768px){
   .content{
-    padding-top:8vh;
+    padding-top:15vh; /* タイトル下余白増 */
     padding-left:5vw;
   }
-  h1{ font-size:3rem; }
-  .subtitle{ font-size:1.2rem; }
-  .section{ font-size:1rem; }
-  .item{ font-size:1.2rem; margin-top:18px; }
-  .control-btn{ font-size:1rem; margin-top:50px; }
+  h1{
+    font-size:3rem;
+  }
+  .subtitle{
+    font-size:1.2rem;
+  }
+  .section{
+    font-size:1rem;
+  }
+  .item{
+    font-size:1.2rem;
+    margin-top:18px;
+  }
+  .control-btn{
+    font-size:1rem;
+    margin-top:50px;
+  }
 }
 </style>
 </head>
@@ -107,128 +134,7 @@ h1{
 </div>
 
 <script>
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
-
-function resize(){
-  canvas.width=window.innerWidth;
-  canvas.height=window.innerHeight;
-}
-resize();
-window.addEventListener("resize",resize);
-
-let mouse={x:canvas.width/2,y:canvas.height/2};
-let pen={x:mouse.x,y:mouse.y};
-let lastPen={x:pen.x,y:pen.y};
-let width=25;
-
-let points=[];
-let drawCount=0;
-const maxDraw=600;
-let isDrawing=false;
-
-// ===== PC: 常にマウス追従 =====
-const isPC = window.innerWidth > 768;
-if(isPC){
-  isDrawing = true; // PCは常に描画
-  window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
-}
-
-// ===== タッチ対応 =====
-window.addEventListener("touchstart", e=>{
-  if(e.touches.length===1){
-    isDrawing=true;
-    mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY;
-    pen.x=mouse.x;
-    pen.y=mouse.y;
-    lastPen.x=pen.x;
-    lastPen.y=pen.y;
-  } else isDrawing=false;
-});
-
-window.addEventListener("touchmove", e=>{
-  if(e.touches.length===1 && isDrawing){
-    mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY;
-  }
-  e.preventDefault();
-},{passive:false});
-
-window.addEventListener("touchend", e=>{
-  if(e.touches.length===0) isDrawing=false;
-});
-
-// ===== 補間 =====
-function interpolate(p0,p1,seg){
-  const arr=[];
-  for(let i=0;i<seg;i++){
-    const t=i/seg;
-    arr.push({x:p0.x+(p1.x-p0.x)*t, y:p0.y+(p1.y-p0.y)*t});
-  }
-  return arr;
-}
-
-// ===== 描画ループ =====
-function draw(){
-  if(isDrawing){
-    const ease = isPC ? 0.22 : 0.3;
-    pen.x += (mouse.x-pen.x)*ease;
-    pen.y += (mouse.y-pen.y)*ease;
-
-    const dx=pen.x-lastPen.x;
-    const dy=pen.y-lastPen.y;
-    const speed=Math.sqrt(dx*dx+dy*dy);
-
-    let targetWidth=25-Math.pow(speed*1.3,0.85);
-    if(isPC) targetWidth*=1.2; // PC筆圧的に太く
-    if(targetWidth<0.5) targetWidth=0.5;
-    width+=(targetWidth-width)*0.2;
-
-    points.push({x:pen.x,y:pen.y,w:width});
-    if(points.length>8) points.shift();
-
-    if(points.length>=2){
-      for(let i=0;i<points.length-1;i++){
-        const p0=points[i];
-        const p1=points[i+1];
-        const interp=interpolate(p0,p1,4);
-        interp.forEach((pt,idx)=>{
-          const next=interp[idx+1]||p1;
-          ctx.beginPath();
-          ctx.moveTo(pt.x,pt.y);
-          ctx.lineTo(next.x,next.y);
-          const w=p0.w*(1-i/points.length*0.6);
-          ctx.lineWidth=w;
-          const shade=Math.floor(Math.random()*12);
-          ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
-          ctx.lineCap="round";
-          ctx.stroke();
-          drawCount++;
-        });
-      }
-    }
-
-    if(drawCount>maxDraw){
-      ctx.fillStyle="rgba(255,255,255,0.008)";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-    }
-  }
-
-  lastPen.x=pen.x;
-  lastPen.y=pen.y;
-  requestAnimationFrame(draw);
-}
-draw();
-
-// ===== RESET =====
-function resetCanvas(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawCount=0;
-  points=[];
-}
-
-// ===== FREEZE 全画面保存 =====
+/* ===== FREEZE ===== */
 function saveImage(){
   html2canvas(document.body).then(canvasImage=>{
     const link=document.createElement("a");
@@ -237,10 +143,111 @@ function saveImage(){
     link.click();
   });
 }
+
+/* ===== RESET ===== */
+function resetCanvas(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawCount=0;
+  points=[];
+}
+
+/* ===== 背景アニメーション ===== */
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+function resize(){
+  canvas.width=innerWidth;
+  canvas.height=innerHeight;
+}
+resize();
+
+let mouse={x:canvas.width/2,y:canvas.height/2};
+let pen={x:mouse.x,y:mouse.y};
+let lastPen={x:pen.x,y:pen.y};
+
+const ease=0.22;
+const maxWidth=25;
+const minWidth=0.5;
+let width=maxWidth;
+
+let points=[];
+let drawCount=0;
+const maxDraw=450;
+
+/* ===== PC ===== */
+window.addEventListener("mousemove", e=>{
+  mouse.x=e.clientX;
+  mouse.y=e.clientY;
+});
+
+/* ===== スマホ ===== */
+window.addEventListener("touchstart", e=>{
+  mouse.x=e.touches[0].clientX;
+  mouse.y=e.touches[0].clientY;
+});
+window.addEventListener("touchmove", e=>{
+  mouse.x=e.touches[0].clientX;
+  mouse.y=e.touches[0].clientY;
+});
+
+/* ===== 軽量化 ===== */
+const maxPoints=10;  // ポイント数減らしてスマホ軽量化
+
+function draw(){
+  pen.x+=(mouse.x-pen.x)*ease;
+  pen.y+=(mouse.y-pen.y)*ease;
+
+  const dx=pen.x-lastPen.x;
+  const dy=pen.y-lastPen.y;
+  const speed=Math.sqrt(dx*dx+dy*dy);
+
+  let targetWidth=maxWidth-Math.pow(speed*1.3,0.85);
+  if(targetWidth<minWidth) targetWidth=minWidth;
+  width+=(targetWidth-width)*0.2;
+
+  points.push({x:pen.x, y:pen.y, w:width});
+  if(points.length>maxPoints) points.shift();
+
+  if(points.length>=2){
+    for(let i=0;i<points.length-1;i++){
+      const p1=points[i+1];
+
+      ctx.beginPath();
+      ctx.moveTo(points[i].x,points[i].y);
+      ctx.lineTo(p1.x,p1.y);
+
+      const w=p1.w*(1-i/points.length*0.6);
+      ctx.lineWidth=w;
+
+      const shade=Math.floor(Math.random()*6); // 軽め
+      ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
+
+      ctx.lineCap="round";
+      ctx.stroke();
+
+      drawCount++;
+    }
+  }
+
+  // 蓄積量に応じて徐々に薄く
+  if(drawCount>maxDraw){
+    ctx.fillStyle="rgba(255,255,255,0.008)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  lastPen.x=pen.x;
+  lastPen.y=pen.y;
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+window.addEventListener("resize", resize);
 </script>
 
 </body>
 </html>
+
 
 
 
