@@ -122,23 +122,18 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 let isMobile = /Mobi|Android/i.test(navigator.userAgent);
-let maxWidth = isMobile ? 25 : 45; // PCはさらに太く
+let maxWidth = isMobile ? 25 : 45; // PCは太く
 const minWidth = 0.5;
 const ease = 0.22;
-const maxPoints = 10;
+const maxPoints = isMobile ? 10 : 30; // PCは滑らか
 let width = maxWidth;
 let points = [];
 let drawCount = 0;
 const maxDraw = 450;
 
-// 描画制限（スマホ下端が見切れないように）
-function getCanvasHeight() {
-  return isMobile ? window.innerHeight - 30 : window.innerHeight;
-}
-
 function resize() {
   canvas.width = window.innerWidth;
-  canvas.height = getCanvasHeight();
+  canvas.height = window.innerHeight; // 画面いっぱい
 }
 resize();
 
@@ -149,20 +144,19 @@ let lastPen = { x: pen.x, y: pen.y };
 
 window.addEventListener("mousemove", e=>{
   mouse.x = e.clientX;
-  mouse.y = Math.min(e.clientY, canvas.height); // 下は描けない
+  mouse.y = e.clientY;
 });
 window.addEventListener("touchstart", e=>{
   mouse.x = e.touches[0].clientX;
-  mouse.y = Math.min(e.touches[0].clientY, canvas.height);
+  mouse.y = e.touches[0].clientY;
 });
 window.addEventListener("touchmove", e=>{
   mouse.x = e.touches[0].clientX;
-  mouse.y = Math.min(e.touches[0].clientY, canvas.height);
+  mouse.y = e.touches[0].clientY;
 });
 
 /* ===== 描画 ===== */
 function draw() {
-  // イージング
   pen.x += (mouse.x - pen.x) * ease;
   pen.y += (mouse.y - pen.y) * ease;
 
@@ -170,7 +164,6 @@ function draw() {
   const dy = pen.y - lastPen.y;
   const speed = Math.sqrt(dx*dx + dy*dy);
 
-  // 太さ変化を少し強めて墨感アップ
   let targetWidth = maxWidth - Math.pow(speed*1.2,0.9);
   if(targetWidth < minWidth) targetWidth = minWidth;
   width += (targetWidth - width) * 0.25;
@@ -181,15 +174,12 @@ function draw() {
   if(points.length >= 2){
     for(let i=0; i<points.length-1; i++){
       const p1 = points[i+1];
-      if(p1.y > canvas.height) continue; // 下端制限
       ctx.beginPath();
       ctx.moveTo(points[i].x, points[i].y);
       ctx.lineTo(p1.x, p1.y);
-      // 太さにランダム変化で墨っぽく
-      const w = p1.w * (0.85 + Math.random()*0.3);
+      const w = p1.w * (0.85 + Math.random()*0.3); // 墨っぽい太さランダム
       ctx.lineWidth = w;
-      // 黒の濃淡ランダム強化
-      const shade = Math.floor(Math.random()*20); // 0~19でより濃い墨
+      const shade = Math.floor(Math.random()*20); // 墨感強化
       ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
       ctx.lineCap = "round";
       ctx.stroke();
@@ -197,7 +187,6 @@ function draw() {
     }
   }
 
-  // 徐々に薄く
   if(drawCount > maxDraw){
     ctx.fillStyle = "rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -213,6 +202,7 @@ window.addEventListener("resize", resize);
 </script>
 </body>
 </html>
+
 
 
 
