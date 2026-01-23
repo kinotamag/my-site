@@ -211,7 +211,52 @@ canvas.addEventListener("mousedown",e=>{
   startDrag(e.clientX-r.left, e.clientY-r.top);
 });
 canvas.addEventListener("touchstart",e=>{
-  if(e.
+  if(e.touches.length===1){
+    const r=canvas.getBoundingClientRect();
+    startDrag(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top);
+  }
+}, {passive:false});
+
+addEventListener("mousemove",e=>{
+  const r=canvas.getBoundingClientRect();
+  moveDrag(e.clientY-r.top);
+});
+addEventListener("touchmove",e=>{
+  if(e.touches.length===1){
+    e.preventDefault();
+    const r=canvas.getBoundingClientRect();
+    moveDrag(e.touches[0].clientY-r.top);
+  }
+}, {passive:false});
+
+addEventListener("mouseup",()=>knob.dragging=false);
+addEventListener("touchend",()=>knob.dragging=false);
+
+// ===== 生成 =====
+setInterval(()=>{ if(bodies.length<140) bodies.push(new Body()); }, rand(160,360));
+
+function drawWalls(){ ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2;
+ctx.beginPath(); ctx.moveTo(WALL_L,0); ctx.lineTo(WALL_L,canvas.height);
+ctx.moveTo(WALL_R(),0); ctx.lineTo(WALL_R(),canvas.height); ctx.stroke(); }
+
+function drawFloor(){ ctx.strokeStyle="rgba(255,255,255,0.15)"; ctx.lineWidth=3;
+ctx.beginPath(); ctx.moveTo(0,FLOOR_Y()); ctx.lineTo(canvas.width,FLOOR_Y()); ctx.stroke(); }
+
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  bodies.forEach(b=>b.update());
+  collide();
+  bodies.forEach(b=>b.draw());
+  drawWalls();
+  drawFloor();
+  drawBPMKnob();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
+
 
 
 
