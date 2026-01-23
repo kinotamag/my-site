@@ -9,33 +9,29 @@
 <style>
 body {
   margin:0;
-  overflow:hidden;
   background:white;
   font-family:'Inter', sans-serif;
 }
 
-/* ===== 背景 ===== */
+/* 背景 */
 canvas {
   position:fixed;
   top:0;
   left:0;
   z-index:0;
-  display:block;
 }
 
-/* ===== テキスト ===== */
+/* テキスト */
 .content {
   position:relative;
   z-index:1;
-  height:100vh;
+  min-height:100vh;
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
   padding-left:10vw;
   padding-top:10vh;
   color:#111;
-  opacity:0;
-  animation:fadeIn 1.2s ease forwards;
 }
 
 h1 {
@@ -64,7 +60,6 @@ h1 {
   letter-spacing:0.08em;
   text-decoration:none;
   color:#111;
-  user-select:none;
 }
 
 .freeze-btn {
@@ -73,18 +68,12 @@ h1 {
   letter-spacing:0.2em;
   background:none;
   border:none;
-  padding:0;
   cursor:pointer;
   color:#111;
-  user-select:none;
 }
 
 .freeze-btn:hover {
   opacity:0.6;
-}
-
-@keyframes fadeIn {
-  to { opacity:1; }
 }
 </style>
 </head>
@@ -144,8 +133,6 @@ function noise(val) {
 }
 
 function draw() {
-  ctx.fillStyle = "rgba(255,255,255,0.04)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
 
   pen.x += (mouse.x - pen.x) * ease;
   pen.y += (mouse.y - pen.y) * ease;
@@ -204,6 +191,7 @@ window.addEventListener("resize", resize);
 
 </body>
 </html>
+
 
 
 
