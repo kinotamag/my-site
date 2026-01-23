@@ -82,8 +82,8 @@ h1{
 <canvas id="canvas"></canvas>
 
 <div class="content">
-  <h1>KINOTAMAG</h1>
-  <div class="subtitle">composer / visual</div>
+  <h1>木の卵/kinotamag</h1>
+  <div class="subtitle">🥚🥚 🥚</div>
 
   <div class="section">WORKS</div>
   <a href="#" class="item">01</a>
@@ -101,7 +101,7 @@ h1{
 function saveImage(){
   html2canvas(document.body).then(canvasImage=>{
     const link=document.createElement("a");
-    link.download="trace.png";
+    link.download="trail.png";
     link.href=canvasImage.toDataURL();
     link.click();
   });
@@ -167,7 +167,6 @@ function draw(){
       const w=p1.w*(1-i/points.length*0.6);
       ctx.lineWidth=w;
 
-      // 濃さ強化（より締まる）
       const shade=Math.floor(Math.random()*8);
       ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
 
@@ -178,7 +177,6 @@ function draw(){
     }
   }
 
-  // 浄化かなり弱め（残像強化）
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -197,6 +195,7 @@ window.addEventListener("resize",resize);
 
 </body>
 </html>
+
 
 
 
