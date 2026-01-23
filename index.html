@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 body {
   margin:0;
@@ -47,6 +46,32 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   </div>
 </div>
 <script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let isMobile = /Mobi|Android/i.test(navigator.userAgent);
+let maxWidth = isMobile ? 25 : 45;
+const minWidth = 0.5;
+const ease = 0.22;
+
+let width = maxWidth;
+let mouse = { x: window.innerWidth/2, y: window.innerHeight/2 };
+let pen = { x: mouse.x, y: mouse.y };
+let lastPen = { x: pen.x, y: pen.y };
+
+let points = [];
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+window.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener("touchstart", e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+window.addEventListener("touchmove", e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+
 function saveImage() {
   html2canvas(document.body).then(canvasImage => {
     const link = document.createElement("a");
@@ -55,46 +80,32 @@ function saveImage() {
     link.click();
   });
 }
+
 function resetCanvas() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   points = [];
 }
 
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-let isMobile = /Mobi|Android/i.test(navigator.userAgent);
-let maxWidth = isMobile ? 25 : 45;
-const minWidth = 0.5;
-const ease = 0.22;
-const maxPoints = isMobile ? 15 : 50;
-let width = maxWidth;
-let points = [];
-
-function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-resize();
-
-let mouse = { x: canvas.width/2, y: canvas.height/2 };
-let pen = { x: mouse.x, y: mouse.y };
-let lastPen = { x: pen.x, y: pen.y };
-
-window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
-window.addEventListener("touchstart", e=>{ mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; });
-window.addEventListener("touchmove", e=>{ mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; });
-
 function draw(){
-  pen.x += (mouse.x - pen.x)*ease;
-  pen.y += (mouse.y - pen.y)*ease;
+  // ペン位置をマウスに追従
+  pen.x += (mouse.x - pen.x) * ease;
+  pen.y += (mouse.y - pen.y) * ease;
+
   const dx = pen.x - lastPen.x;
   const dy = pen.y - lastPen.y;
   const speed = Math.sqrt(dx*dx + dy*dy);
-  let targetWidth = maxWidth - Math.pow(speed*1.2,0.9);
+  let targetWidth = maxWidth - Math.pow(speed*1.2, 0.9);
   if(targetWidth < minWidth) targetWidth = minWidth;
-  width += (targetWidth - width)*0.25;
+  width += (targetWidth - width) * 0.25;
 
-  points.push({x:pen.x, y:pen.y, w:width});
-  if(points.length > maxPoints) points.shift(); // 古い点を少しずつ消す
+  points.push({x: pen.x, y: pen.y, w: width});
+  if(points.length > 100) points.shift(); // 適度に古い点を削除して薄くなる
 
-  // 画面クリアせずに描画
-  ctx.clearRect(0,0,canvas.width,canvas.height); // 毎フレーム全体をクリアして再描画（残像を作る）
+  // キャンバスを微かに白でオーバーレイ → 残像が自然に薄くなる
+  ctx.fillStyle = "rgba(255,255,255,0.02)"; // 0.02で薄くなる
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // 点を描く
   for(let i=0;i<points.length-1;i++){
     const p0 = points[i];
     const p1 = points[i+1];
@@ -103,9 +114,9 @@ function draw(){
       const t = s/steps;
       const x = p0.x + (p1.x-p0.x)*t;
       const y = p0.y + (p1.y-p0.y)*t;
-      let w = p0.w + (p1.w-p0.w)*t*(0.85+Math.random()*0.3);
+      let w = p0.w + (p1.w-p0.w)*t*(0.85 + Math.random()*0.3);
 
-      // 黒寄りの墨感
+      // 黒寄りの墨感を4重で
       for(let k=0;k<4;k++){
         const shade = Math.floor(Math.random()*15);
         ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
@@ -127,10 +138,10 @@ function draw(){
 }
 
 draw();
-window.addEventListener("resize", resize);
 </script>
 </body>
 </html>
+
 
 
 
