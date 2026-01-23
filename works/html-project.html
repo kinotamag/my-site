@@ -33,7 +33,7 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 .button-container {
   display:flex; flex-direction:column;
   gap:16px;
-  align-items:center; /* 横中央揃え */
+  align-items:flex-start; /* PC版は左揃え */
   margin-top:8px;
 }
 .button-link {
@@ -63,11 +63,26 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   background:#222;
 }
 
+/* 2段ボタン用調整 */
+.button-container.two-buttons {
+  margin-top:16px;
+}
+
+/* スマホ専用調整 */
 @media (max-width:768px){
   .content { padding-left:5vw; padding-top:15vh; }
   h1 { font-size:3rem; }
   .subtitle { font-size:1.2rem; }
   .section { font-size:1rem; }
+
+  /* 左揃え→中央寄せ */
+  .button-container { align-items:center; }
+  
+  /* 戻るボタンを下に下げて余白確保 */
+  .section .button-container:last-child { 
+    margin-top:40px; 
+    margin-bottom:40px; 
+  }
   .button-link { width:70%; max-width:250px; height:80px; }
 }
 </style>
@@ -95,7 +110,7 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
       <a href="20260123-2.html" class="button-link"></a>
     </div>
     <!-- 戻る -->
-    <div class="button-container" style="margin-top:20px;">
+    <div class="button-container">
       戻る
       <a href="index.html" class="button-link"></a>
     </div>
@@ -187,6 +202,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
