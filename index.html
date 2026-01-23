@@ -91,7 +91,7 @@ let isMobile = /Mobi|Android/i.test(navigator.userAgent);
 let maxWidth = isMobile ? 25 : 45;
 const minWidth = 0.5;
 const ease = 0.22;
-const maxPoints = isMobile ? 15 : 50; // PCは滑らか
+const maxPoints = isMobile ? 15 : 50;
 let width = maxWidth;
 let points = [];
 let drawCount = 0;
@@ -139,12 +139,17 @@ function draw() {
         const y = p0.y + (p1.y - p0.y)*t;
         let w = p0.w + (p1.w - p0.w)*t*(0.85 + Math.random()*0.3);
 
-        // 墨感のため丸を複数回重ねる
-        for(let k=0;k<3;k++){
+        // 丸を複数回重ねて描画
+        for(let k=0;k<4;k++){ // 4回重ね
           const shade = Math.floor(Math.random()*20);
           ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
           ctx.beginPath();
-          ctx.arc(x + Math.random()*0.3, y + Math.random()*0.3, w/2, 0, Math.PI*2);
+          ctx.arc(
+            x + (Math.random()*0.5-0.25),
+            y + (Math.random()*0.5-0.25),
+            w/2,
+            0, Math.PI*2
+          );
           ctx.fill();
         }
       }
@@ -152,9 +157,9 @@ function draw() {
     }
   }
 
-  // 徐々に薄くする場合も丸が目立たない
+  // 徐々に薄くするが丸が目立たない
   if(drawCount > maxDraw){
-    ctx.fillStyle = "rgba(255,255,255,0.008)";
+    ctx.fillStyle = "rgba(255,255,255,0.03)"; // 透明度アップ
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
@@ -168,6 +173,7 @@ window.addEventListener("resize", resize);
 </script>
 </body>
 </html>
+
 
 
 
