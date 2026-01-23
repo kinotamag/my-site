@@ -12,11 +12,12 @@ html,body{
 }
 canvas{display:block}
 
+/* 戻るボタン */
 .control-btn {
   position: fixed;
   top: 20px;
   left: 20px;
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 700;
   background: rgba(255,255,255,0.15);
   border: 2px solid #fff;
@@ -24,15 +25,15 @@ canvas{display:block}
   color: #fff;
   z-index: 2;
   touch-action: manipulation;
-  padding: 18px 32px;
+  padding: 16px 28px;
   border-radius: 6px;
 }
 .control-btn:hover { opacity:0.6; }
 
 @media (max-width:768px){
   .control-btn {
-    font-size: 2.2rem;
-    padding: 24px 40px;
+    font-size: 2.6rem;
+    padding: 24px 36px;
   }
 }
 </style>
@@ -42,62 +43,61 @@ canvas{display:block}
 <button class="control-btn" onclick="history.back()">戻る</button>
 
 <script>
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
 
 function resize(){ canvas.width=innerWidth; canvas.height=innerHeight; }
 addEventListener("resize",resize);
 resize();
 
-const rand=(a,b)=>Math.random()*(b-a)+a;
-const pick=a=>a[Math.floor(Math.random()*a.length)];
+const isSP=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 const WALL_L=40;
 const WALL_R=()=>canvas.width-80;
 const FLOOR_Y=()=>canvas.height-40;
-
-const isSP=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 let bpm=100;
 const BPM_MIN=0,BPM_MAX=200;
 
 const knob={
   x:()=>canvas.width-60,
-  r:isSP?40:20,
+  y:()=>canvas.height/2,
+  r:isSP?30:20,
   dragging:false,
-  hitR:isSP?60:40,
-  yDisplay:null // 表示用のy座標（ドラッグ中も更新）
+  hitR:isSP?60:30
 };
 function bpmFactor(){ return bpm/100; }
 
 const bodies=[];
-function color(){ return `hsl(${rand(0,360)},${rand(55,100)}%,${rand(40,70)}%)`; }
+function color(){ return `hsl(${Math.random()*360},${Math.random()*45+55}%,${Math.random()*30+40}%)`; }
 
 class Body{
   constructor(){ this.reset(); }
   reset(){
-    this.r=rand(14,52);
-    this.x=rand(WALL_L+this.r,WALL_R()-this.r);
-    this.y=rand(-canvas.height,-this.r*2);
+    this.r=Math.random()*38+14;
+    this.x=Math.random()*(WALL_R()-WALL_L-2*this.r)+WALL_L+this.r;
+    this.y=Math.random()*-canvas.height-this.r*2;
     const sizeFactor=this.r/30;
-    const rareBoost=Math.random()<0.08?rand(1.8,2.6):1;
-    this.gravityBase=rand(0.08,0.16)*sizeFactor*rareBoost;
-    this.vx=rand(-1,1); this.vy=rand(0.1,0.6)*rareBoost;
-    this.wallRest=rand(0.4,0.85);
-    this.floorRest=rand(0.5,0.8);
+    const rareBoost=Math.random()<0.08?Math.random()*0.8+1.8:1;
+    this.gravityBase=(Math.random()*0.08+0.08)*sizeFactor*rareBoost;
+    this.vx=Math.random()*2-1;
+    this.vy=(Math.random()*0.5+0.1)*rareBoost;
+    this.wallRest=Math.random()*0.45+0.4;
+    this.floorRest=Math.random()*0.3+0.5;
     this.friction=0.92;
-    this.shape=pick(["circle","square","triangle","diamond","capsule","pentagon"]);
-    this.mode=pick(["fill","stroke"]);
+    this.shape=["circle","square","triangle","diamond","capsule","pentagon"][Math.floor(Math.random()*6)];
+    this.mode=["fill","stroke"][Math.floor(Math.random()*2)];
     this.col=color();
-    this.lineW=rand(1.2,3.6);
-    this.rot=rand(0,Math.PI*2);
-    this.vr=rand(-0.01,0.01);
+    this.lineW=Math.random()*2.4+1.2;
+    this.rot=Math.random()*Math.PI*2;
+    this.vr=Math.random()*0.02-0.01;
     this.scaleX=1; this.scaleY=1;
   }
   update(){
     const f=bpmFactor();
     this.vy+=this.gravityBase*f;
-    this.x+=this.vx*f; this.y+=this.vy*f;
+    this.x+=this.vx*f;
+    this.y+=this.vy*f;
     this.rot+=this.vr*f;
     if(this.x-this.r<WALL_L){ this.x=WALL_L+this.r; this.vx*=-this.wallRest; }
     if(this.x+this.r>WALL_R()){ this.x=WALL_R()-this.r; this.vx*=-this.wallRest; }
@@ -107,7 +107,7 @@ class Body{
       this.vx*=this.friction;
       this.scaleY=0.6+0.4*(this.r/52);
       this.scaleX=1.2-0.2*(this.r/52);
-    }else{
+    } else {
       this.scaleX+=(1-this.scaleX)*0.1;
       this.scaleY+=(1-this.scaleY)*0.1;
     }
@@ -120,20 +120,14 @@ class Body{
     ctx.scale(this.scaleX,this.scaleY);
     ctx.beginPath();
     switch(this.shape){
-      case "circle": ctx.arc(0,0,this.r,0,Math.PI*2); break;
-      case "square": ctx.rect(-this.r,-this.r,this.r*2,this.r*2); break;
-      case "triangle": ctx.moveTo(0,-this.r); ctx.lineTo(this.r,this.r); ctx.lineTo(-this.r,this.r); ctx.closePath(); break;
-      case "diamond": ctx.moveTo(0,-this.r); ctx.lineTo(this.r,0); ctx.lineTo(0,this.r); ctx.lineTo(-this.r,0); ctx.closePath(); break;
-      case "capsule":{ const w=this.r*1.4,h=this.r*0.8;
-        ctx.moveTo(-w/2,-h/2); ctx.lineTo(w/2,-h/2); ctx.arc(w/2,0,h/2,-Math.PI/2,Math.PI/2);
-        ctx.lineTo(-w/2,h/2); ctx.arc(-w/2,0,h/2,Math.PI/2,-Math.PI/2); ctx.closePath();
-      } break;
-      case "pentagon":
-        for(let i=0;i<5;i++){ const a=Math.PI*2/5*i-Math.PI/2; const rr=this.r*rand(0.85,1);
-        const x=Math.cos(a)*rr,y=Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.closePath(); break;
+      case"circle":ctx.arc(0,0,this.r,0,Math.PI*2);break;
+      case"square":ctx.rect(-this.r,-this.r,this.r*2,this.r*2);break;
+      case"triangle":ctx.moveTo(0,-this.r);ctx.lineTo(this.r,this.r);ctx.lineTo(-this.r,this.r);ctx.closePath();break;
+      case"diamond":ctx.moveTo(0,-this.r);ctx.lineTo(this.r,0);ctx.lineTo(0,this.r);ctx.lineTo(-this.r,0);ctx.closePath();break;
+      case"capsule":{ const w=this.r*1.4,h=this.r*0.8;ctx.moveTo(-w/2,-h/2);ctx.lineTo(w/2,-h/2);ctx.arc(w/2,0,h/2,-Math.PI/2,Math.PI/2);ctx.lineTo(-w/2,h/2);ctx.arc(-w/2,0,h/2,Math.PI/2,-Math.PI/2);ctx.closePath(); } break;
+      case"pentagon":for(let i=0;i<5;i++){ const a=Math.PI*2/5*i-Math.PI/2, rr=this.r*(Math.random()*0.15+0.85); const x=Math.cos(a)*rr, y=Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); break;
     }
-    if(this.mode==="fill"){ ctx.fillStyle=this.col; ctx.fill(); }
-    else{ ctx.strokeStyle=this.col; ctx.lineWidth=this.lineW; ctx.stroke(); }
+    if(this.mode==="fill"){ ctx.fillStyle=this.col; ctx.fill(); }else{ ctx.strokeStyle=this.col; ctx.lineWidth=this.lineW; ctx.stroke(); }
     ctx.restore();
   }
 }
@@ -157,51 +151,42 @@ function collide(){
   }
 }
 
-// ===== ノブ描画（数字なし） =====
-function drawBPMKnob(){
-  const x=knob.x();
-  if(knob.yDisplay===null) knob.yDisplay=canvas.height/2;
+// ノブ描画（数字なし）
+function drawKnob(){
+  const x=knob.x(), y=knob.y;
   ctx.strokeStyle="rgba(255,255,255,0.25)";
   ctx.lineWidth=isSP?4:2;
-  ctx.beginPath(); ctx.moveTo(x,knob.yDisplay-100); ctx.lineTo(x,knob.yDisplay+100); ctx.stroke();
-  const t=bpm/BPM_MAX, ky=knob.yDisplay+100-t*200;
-  ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
+  const t=bpm/BPM_MAX, ky=y+100-t*200;
+  ctx.fillStyle="white";
+  ctx.beginPath(); ctx.arc(x,ky,knob.r,0,Math.PI*2);
+  ctx.fill();
 }
 
-// ===== ドラッグ =====
+// ドラッグ処理
 function startDrag(x,y){
-  const kx=knob.x(), ky=knob.yDisplay;
-  if(Math.hypot(x-kx,y-ky)<=knob.hitR){ knob.dragging=true; moveDrag(y); }
+  const dx=x-knob.x(), dy=y-knob.y;
+  if(Math.hypot(dx,dy)<=knob.hitR) knob.dragging=true;
 }
 function moveDrag(y){
   if(!knob.dragging) return;
   const minY=knob.r+100, maxY=canvas.height-knob.r-100;
-  y=Math.max(minY,Math.min(maxY,y));
-  knob.yDisplay=y;
-  bpm=Math.round(BPM_MAX-((y-(canvas.height/2-100))/200)*(BPM_MAX-BPM_MIN));
+  knob.y=Math.max(minY,Math.min(maxY,y));
+  bpm=Math.round(BPM_MAX-((knob.y-(canvas.height/2-100))/200)*(BPM_MAX-BPM_MIN));
 }
 
 canvas.addEventListener("mousedown",e=>startDrag(e.clientX,e.clientY));
-canvas.addEventListener("touchstart",e=>{
-  if(e.touches.length===1) startDrag(e.touches[0].clientX,e.touches[0].clientY);
-},{passive:false});
-
+canvas.addEventListener("touchstart",e=>{ if(e.touches.length===1){ startDrag(e.touches[0].clientX,e.touches[0].clientY); }},{passive:false});
 addEventListener("mousemove",e=>moveDrag(e.clientY));
-addEventListener("touchmove",e=>{
-  if(e.touches.length===1){ e.preventDefault(); moveDrag(e.touches[0].clientY); }
-},{passive:false});
-
+addEventListener("touchmove",e=>{ if(e.touches.length===1){ e.preventDefault(); moveDrag(e.touches[0].clientY); }},{passive:false});
 addEventListener("mouseup",()=>knob.dragging=false);
 addEventListener("touchend",()=>knob.dragging=false);
 
-setInterval(()=>{ if(bodies.length<140) bodies.push(new Body()); }, rand(160,360));
+setInterval(()=>{ if(bodies.length<140) bodies.push(new Body()); },rand(160,360));
 
-function drawWalls(){ ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2;
-ctx.beginPath(); ctx.moveTo(WALL_L,0); ctx.lineTo(WALL_L,canvas.height);
-ctx.moveTo(WALL_R(),0); ctx.lineTo(WALL_R(),canvas.height); ctx.stroke(); }
-
-function drawFloor(){ ctx.strokeStyle="rgba(255,255,255,0.15)"; ctx.lineWidth=3;
-ctx.beginPath(); ctx.moveTo(0,FLOOR_Y()); ctx.lineTo(canvas.width,FLOOR_Y()); ctx.stroke(); }
+function drawWalls(){ ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(WALL_L,0); ctx.lineTo(WALL_L,canvas.height); ctx.moveTo(WALL_R(),0); ctx.lineTo(WALL_R(),canvas.height); ctx.stroke(); }
+function drawFloor(){ ctx.strokeStyle="rgba(255,255,255,0.15)"; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(0,FLOOR_Y()); ctx.lineTo(canvas.width,FLOOR_Y()); ctx.stroke(); }
 
 function loop(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -210,13 +195,14 @@ function loop(){
   bodies.forEach(b=>b.draw());
   drawWalls();
   drawFloor();
-  drawBPMKnob();
+  drawKnob();
   requestAnimationFrame(loop);
 }
 loop();
 </script>
 </body>
 </html>
+
 
 
 
