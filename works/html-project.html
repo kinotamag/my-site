@@ -22,43 +22,50 @@ canvas {
 }
 
 .content { 
-  position:relative; z-index:1; min-height:100vh; 
-  display:flex; flex-direction:column; justify-content:flex-start; 
-  padding-left:10vw; padding-top:9vh; color:#111; 
+  position:relative; 
+  z-index:1; 
+  min-height:100vh; 
+  display:flex; 
+  flex-direction:column; 
+  justify-content:flex-start; 
+  padding-left:10vw; 
+  padding-top:9vh; 
+  color:#111; 
 }
 
-h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-align:left; }
+h1 { 
+  font-size:2.4rem; 
+  font-weight:500; 
+  letter-spacing:0.12em; 
+  margin:0; 
+}
 
-.section { margin-top:60px; font-size:0.75rem; letter-spacing:0.2em; text-align:left; }
-
-.section-title {
-  margin-bottom:8px;
-  font-size:0.75rem;
-  letter-spacing:0.2em;
-  text-align:left;
+.section { 
+  margin-top:60px; 
+  font-size:0.75rem; 
+  letter-spacing:0.2em; 
 }
 
 .button-container {
-  display:flex; flex-direction:column;
+  display:flex; 
+  flex-direction:column; 
   gap:16px;
-  align-items:flex-start;
-  margin-top:8px;
+  align-items:flex-start;   /* PCは左揃え */
+  margin-top:20px;
 }
 
 .button-link {
   display:inline-flex;
   justify-content:center;
   align-items:center;
-  padding:0;
-  height:60px;           
-  width:180px;           
+  height:60px;
+  width:180px;
   background:#111;
   color:#fff;
   text-decoration:none;
   font-weight:500;
   border-radius:8px;
-  text-align:center;
-  cursor:pointer;        
+  cursor:pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
   font-size:1rem;
   position:relative;
@@ -66,10 +73,11 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-al
 
 .button-link::after {
   content:"Click";
-  color:white;
   position:absolute;
-  top:50%; left:50%;
-  transform: translate(-50%, -50%);
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  color:white;
 }
 
 .button-link:active {
@@ -78,81 +86,63 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; text-al
   background:#222;                   
 }
 
-/* 20260123②のボタンと戻るボタン間 */
-.section .button-container.two-buttons {
-  margin-top:16px;
-  gap:40px; 
+/* 戻る専用余白 */
+.home-button-container {
+  margin-bottom:80px;
 }
 
-/* 戻るボタン下余白 */
-.section .button-container.last { margin-bottom:60px; }
-
-/* スマホ版 */
+/* ===== スマホ ===== */
 @media (max-width:768px){
-  .content{
-    padding-top:15vh;
-    padding-left:5vw;
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start; /* テキスト左揃え */
+
+  .content { 
+    padding-left:5vw; 
+    padding-top:15vh; 
   }
 
-  h1{ font-size:3rem; text-align:left; }
+  h1 { font-size:3rem; }
 
-  .section{
-    font-size:1rem;
-    width:100%;
-    text-align:left;  /* テキスト左揃え */
+  .section { 
+    font-size:1rem; 
   }
 
-  .section-title{
-    font-size:1rem;
-    text-align:left;  /* 上揃え・左揃え */
-    margin-bottom:16px;
+  .button-container {
+    align-items:center;   /* ボタンだけ中央 */
   }
 
-  .button-container{
-    width:100%;
-    display:flex;
-    flex-direction:column;
-    align-items:center; /* ボタンだけ中央 */
-    gap:16px;
-  }
-
-  .button-link{
-    width:70% !important;
-    max-width:250px !important;
-    height:80px !important;
-    font-size:1rem !important;
+  .button-link {
+    width:70%;
+    max-width:250px;
+    height:80px;
   }
 }
 </style>
 </head>
 <body>
+
 <canvas id="canvas"></canvas>
+
 <div class="content">
 
-  <!-- ページタイトル -->
   <h1>HTML</h1>
 
-  <!-- 20260123① -->
   <div class="section">
-    <div class="section-title">20260123①</div>
+    20260123①
     <div class="button-container">
       <a href="20260123-1.html" class="button-link"></a>
     </div>
   </div>
 
-  <!-- 20260123② -->
   <div class="section">
-    <div class="section-title">20260123②</div>
-    <div class="button-container two-buttons">
+    20260123②
+    <div class="button-container">
       <a href="20260123-2.html" class="button-link"></a>
-      <!-- 戻る -->
-      <div class="section-title">戻る</div>
-      <div class="button-container last">
-        <a href="index.html" class="button-link"></a>
-      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    戻る
+    <div class="button-container home-button-container">
+      <a href="index.html" class="button-link"></a>
     </div>
   </div>
 
@@ -167,7 +157,7 @@ document.querySelectorAll('.button-link').forEach(btn => {
   });
 });
 
-// Canvas 追従筆跡
+// Canvas部分（WORKSと同一）
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 let isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -188,9 +178,20 @@ function resizeCanvas(){
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
 
-window.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener("touchstart", e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
-window.addEventListener("touchmove", e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+window.addEventListener("mousemove", e => { 
+  mouse.x = e.clientX; 
+  mouse.y = e.clientY; 
+});
+
+window.addEventListener("touchstart", e => { 
+  mouse.x = e.touches[0].clientX; 
+  mouse.y = e.touches[0].clientY; 
+});
+
+window.addEventListener("touchmove", e => { 
+  mouse.x = e.touches[0].clientX; 
+  mouse.y = e.touches[0].clientY; 
+});
 
 function draw(){
   pen.x += (mouse.x - pen.x)*ease;
@@ -199,8 +200,10 @@ function draw(){
   const dx = pen.x - lastPen.x;
   const dy = pen.y - lastPen.y;
   const speed = Math.sqrt(dx*dx + dy*dy);
+
   let targetWidth = maxWidth - Math.pow(speed*1.2,0.9);
   if(targetWidth < minWidth) targetWidth = minWidth;
+
   width += (targetWidth - width)*0.25;
 
   points.push({x:pen.x, y:pen.y, w:width});
@@ -212,7 +215,11 @@ function draw(){
   for(let i=0;i<points.length-1;i++){
     const p0 = points[i];
     const p1 = points[i+1];
-    const steps = Math.ceil(Math.sqrt((p1.x-p0.x)**2 + (p1.y-p0.y)**2)/2);
+
+    const steps = Math.ceil(
+      Math.sqrt((p1.x-p0.x)**2 + (p1.y-p0.y)**2)/2
+    );
+
     for(let s=0;s<steps;s++){
       const t = s/steps;
       const x = p0.x + (p1.x-p0.x)*t;
@@ -240,8 +247,10 @@ function draw(){
 }
 draw();
 </script>
+
 </body>
 </html>
+
 
 
 
