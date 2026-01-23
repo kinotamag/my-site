@@ -127,11 +127,14 @@ let drawCount=0;
 const maxDraw=600;
 let isDrawing=false;
 
-/* タッチ & マウス */
-window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
-window.addEventListener("mousedown", e=>{ isDrawing=true; mouse.x=e.clientX; mouse.y=e.clientY; pen.x=mouse.x; pen.y=mouse.y; lastPen.x=pen.x; lastPen.y=pen.y; });
-window.addEventListener("mouseup", e=>{ isDrawing=false; });
+// ===== PC: 常にマウス追従 =====
+const isPC = window.innerWidth > 768;
+if(isPC){
+  isDrawing = true; // PCは常に描画
+  window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+}
 
+// ===== タッチ対応 =====
 window.addEventListener("touchstart", e=>{
   if(e.touches.length===1){
     isDrawing=true;
@@ -152,9 +155,11 @@ window.addEventListener("touchmove", e=>{
   e.preventDefault();
 },{passive:false});
 
-window.addEventListener("touchend", e=>{ if(e.touches.length===0) isDrawing=false; });
+window.addEventListener("touchend", e=>{
+  if(e.touches.length===0) isDrawing=false;
+});
 
-/* 補間 */
+// ===== 補間 =====
 function interpolate(p0,p1,seg){
   const arr=[];
   for(let i=0;i<seg;i++){
@@ -164,10 +169,10 @@ function interpolate(p0,p1,seg){
   return arr;
 }
 
-/* 描画ループ */
+// ===== 描画ループ =====
 function draw(){
   if(isDrawing){
-    const ease=0.3;
+    const ease = isPC ? 0.22 : 0.3;
     pen.x += (mouse.x-pen.x)*ease;
     pen.y += (mouse.y-pen.y)*ease;
 
@@ -176,10 +181,7 @@ function draw(){
     const speed=Math.sqrt(dx*dx+dy*dy);
 
     let targetWidth=25-Math.pow(speed*1.3,0.85);
-
-    // PCは筆圧的に強いともっと太く
-    if(window.innerWidth>768) targetWidth*=1.2;
-
+    if(isPC) targetWidth*=1.2; // PC筆圧的に太く
     if(targetWidth<0.5) targetWidth=0.5;
     width+=(targetWidth-width)*0.2;
 
@@ -219,36 +221,19 @@ function draw(){
 }
 draw();
 
-/* RESET */
+// ===== RESET =====
 function resetCanvas(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawCount=0;
   points=[];
 }
 
-/* FREEZE - 描画範囲のみキャプチャ */
+// ===== FREEZE 全画面保存 =====
 function saveImage(){
-  if(points.length===0) return;
-  // 描画範囲取得
-  let minX=canvas.width, minY=canvas.height, maxX=0, maxY=0;
-  points.forEach(p=>{
-    if(p.x<minX) minX=p.x;
-    if(p.y<minY) minY=p.y;
-    if(p.x>maxX) maxX=p.x;
-    if(p.y>maxY) maxY=p.y;
-  });
-  const padding=20; // 少し余白
-  minX=Math.max(0,minX-padding);
-  minY=Math.max(0,minY-padding);
-  maxX=Math.min(canvas.width,maxX+padding);
-  maxY=Math.min(canvas.height,maxY+padding);
-  const w=maxX-minX;
-  const h=maxY-minY;
-
-  html2canvas(canvas, {width:w, height:h, x:minX, y:minY}).then(c=>{
+  html2canvas(document.body).then(canvasImage=>{
     const link=document.createElement("a");
     link.download="trail.png";
-    link.href=c.toDataURL();
+    link.href=canvasImage.toDataURL();
     link.click();
   });
 }
@@ -256,6 +241,7 @@ function saveImage(){
 
 </body>
 </html>
+
 
 
 
