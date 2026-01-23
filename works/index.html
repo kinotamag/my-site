@@ -1,4 +1,3 @@
-<!-- WORKS.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,7 +18,7 @@ body {
 canvas { 
   position:fixed;
   top:0; left:0; z-index:0; 
-  pointer-events:none; /* canvasは描画のみ */
+  pointer-events:none;
 }
 
 .content { 
@@ -41,7 +40,7 @@ a { color:#111; text-decoration:none; }
 
 .button-container {
   display:flex; flex-direction:column; gap:12px;
-  margin-bottom:60px; /* 下に余白を拡大 */
+  margin-bottom:80px; /* 下に余白 */
 }
 
 @media (max-width: 768px){
@@ -53,6 +52,9 @@ a { color:#111; text-decoration:none; }
   
   /* ボタン中央揃え */
   .button-container { align-items:center; }
+
+  /* スマホ版YouTube / SoundCloud埋め込み非表示 */
+  .pc-yt, .pc-sc { display:none; }
 }
 </style>
 </head>
@@ -61,6 +63,29 @@ a { color:#111; text-decoration:none; }
 <div class="content">
   <h1>WORKS</h1>
   <div class="subtitle">🥚🥚 🥚</div>
+
+  <!-- SoundCloud -->
+  <div class="section">SoundCloud</div>
+  <div class="embed-wrapper pc-sc" style="height:300px;">
+    <iframe 
+      src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kinotamag&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" 
+      style="width:100%; height:100%; border:none;" scrolling="yes" frameborder="no" allow="autoplay">
+    </iframe>
+  </div>
+  <div class="embed-wrapper sp-sc" style="display:none; text-align:center;">
+    <a href="https://soundcloud.com/kinotamag" target="_blank" class="button-link"></a>
+  </div>
+
+  <!-- Home -->
+  <div class="button-container">
+    <a href="../index.html" class="button-link" id="home-button"></a>
+  </div>
+
+  <!-- HTML子ページ -->
+  <div class="section">HTML</div>
+  <div class="button-container">
+    <a href="html-child.html" class="button-link"></a>
+  </div>
 
   <!-- YouTube -->
   <div class="section">YouTube</div>
@@ -73,30 +98,7 @@ a { color:#111; text-decoration:none; }
     </iframe>
   </div>
   <div class="embed-wrapper sp-yt" style="display:none; text-align:center;">
-    <a href="https://www.youtube.com/channel/UCKuewu8s7Lb91Nt45o13qKA" target="_blank" class="button-link">
-      YouTube チャンネルを見る
-    </a>
-  </div>
-
-  <!-- SoundCloud -->
-  <div class="section">SoundCloud</div>
-  <div class="embed-wrapper sc-wrapper" style="height:300px;">
-    <iframe 
-      src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kinotamag&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" 
-      style="width:100%; height:100%; border:none;" scrolling="yes" frameborder="no" allow="autoplay">
-    </iframe>
-  </div>
-
-  <!-- HTML項目 -->
-  <div class="section">HTML</div>
-  <div class="button-container">
-    <a href="html-child.html" class="button-link">子ページへ</a> <!-- 子ページリンク -->
-  </div>
-
-  <!-- ボタンまとめ -->
-  <div class="button-container">
-    <a href="../index.html" class="button-link" id="home-button">Home</a> <!-- 下に余白 -->
-    <a href="https://soundcloud.com/kinotamag" target="_blank" class="button-link">SoundCloud</a>
+    <a href="https://www.youtube.com/channel/UCKuewu8s7Lb91Nt45o13qKA" target="_blank" class="button-link"></a>
   </div>
 </div>
 
@@ -106,18 +108,24 @@ function checkDisplay() {
   if(window.innerWidth <= 768){
     document.querySelector('.pc-yt').style.display = 'none';
     document.querySelector('.sp-yt').style.display = 'block';
+    document.querySelector('.pc-sc').style.display = 'none';
+    document.querySelector('.sp-sc').style.display = 'block';
   } else {
     document.querySelector('.pc-yt').style.display = 'block';
     document.querySelector('.sp-yt').style.display = 'none';
+    document.querySelector('.pc-sc').style.display = 'block';
+    document.querySelector('.sp-sc').style.display = 'none';
   }
 }
 window.addEventListener('resize', checkDisplay);
 checkDisplay();
 
-// HOMEボタンのスマホ1回クリックで戻る対応
-document.getElementById('home-button').addEventListener('click', function(e){
-  e.preventDefault();
-  window.location.href = this.href;
+// HOMEボタンとその他ボタンのスマホ1回クリック対応
+document.querySelectorAll('.button-link').forEach(btn => {
+  btn.addEventListener('click', function(e){
+    e.preventDefault();
+    window.location.href = this.href;
+  });
 });
 
 // Canvas 追従筆跡
@@ -195,6 +203,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
