@@ -143,7 +143,7 @@ let mouse={x:canvas.width/2,y:canvas.height/2};
 let pen={x:mouse.x, y:mouse.y};
 let lastPen={x:pen.x, y:pen.y};
 
-const ease=0.22;
+const ease=0.25; // 追従
 const maxWidth=25;
 const minWidth=0.5;
 let width=maxWidth;
@@ -190,7 +190,7 @@ window.addEventListener("touchmove", e=>{
   if(e.touches.length===1 && isDrawing){
     mouse.x=e.touches[0].clientX;
     mouse.y=e.touches[0].clientY;
-    e.preventDefault(); // 1本指描画はスクロール停止
+    e.preventDefault(); // 描画中スクロール防止
   }
 });
 
@@ -220,7 +220,7 @@ function draw(){
       const p0=points[i];
       const p1=points[i+1];
 
-      const interp=interpolatePoints(p0,p1,4);
+      const interp=interpolatePoints(p0,p1,6); // 補間増加で滑らか
       interp.forEach((pt,idx)=>{
         const next = interp[idx+1] || p1;
         ctx.beginPath();
@@ -241,6 +241,7 @@ function draw(){
     }
   }
 
+  // 蓄積量に応じて薄める
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -257,6 +258,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
