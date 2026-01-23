@@ -15,11 +15,11 @@ body{
   -webkit-user-select:none;
   -moz-user-select:none;
   -ms-user-select:none;
-  overflow-y:hidden; /* PCはスクロールなし */
+  overflow:hidden; /* PCはスクロールなし */
 }
 
 canvas{
-  position:absolute;
+  position:fixed;
   top:0;
   left:0;
   z-index:0;
@@ -77,11 +77,12 @@ h1{
 
 /* スマホ用 */
 @media (max-width:768px){
-  body {
-    overflow-y:auto; /* スマホだけスクロール可能 */
+  body{
+    overflow-y:auto;
+    -webkit-overflow-scrolling: touch;
   }
   .content{
-    padding-top:18vh;
+    padding-top:12vh;
     padding-left:5vw;
   }
   h1{ font-size:3rem; }
@@ -90,11 +91,10 @@ h1{
   .item{ font-size:1.2rem; margin-top:18px; }
   .control-btn{ font-size:1rem; margin-top:50px; }
 
-  /* スクロール領域を下に確保 */
   body::after{
     content:'';
     display:block;
-    height:800px; /* 下にスクロールできる領域 */
+    height:1000px; /* スクロール領域 */
   }
 }
 </style>
@@ -144,9 +144,9 @@ const ctx=canvas.getContext("2d");
 function resize(){
   canvas.width = window.innerWidth;
   if(window.innerWidth <= 768){
-    canvas.height = document.body.scrollHeight; // スマホはページ全体
+    canvas.height = document.body.scrollHeight;
   } else {
-    canvas.height = window.innerHeight; // PCは1画面のみ
+    canvas.height = window.innerHeight;
   }
 }
 resize();
@@ -164,7 +164,7 @@ let width=maxWidth;
 
 let points=[];
 let drawCount=0;
-const maxDraw=600; // 蓄積量の上限
+const maxDraw=600; // 蓄積量上限
 
 /* ===== 補間関数 ===== */
 function interpolatePoints(p0,p1,segments){
@@ -182,7 +182,7 @@ let isDrawing=false;
 /* マウス */
 window.addEventListener("mousemove", e=>{
   mouse.x=e.clientX;
-  mouse.y=e.clientY + window.scrollY; // スクロール補正
+  mouse.y=e.clientY + window.scrollY;
 });
 
 /* タッチ */
@@ -196,7 +196,7 @@ window.addEventListener("touchstart", e=>{
     lastPen.x=mouse.x;
     lastPen.y=mouse.y;
   } else {
-    isDrawing=false; // 2本指以上は描画せずスクロール可能
+    isDrawing=false;
   }
 });
 
@@ -204,7 +204,7 @@ window.addEventListener("touchmove", e=>{
   if(e.touches.length===1 && isDrawing){
     mouse.x=e.touches[0].clientX;
     mouse.y=e.touches[0].clientY + window.scrollY;
-    e.preventDefault(); // 1本指描画時のみスクロール停止
+    e.preventDefault(); // 1本指描画はスクロール停止
   }
 });
 
@@ -222,7 +222,6 @@ function draw(){
   const dy = pen.y - lastPen.y;
   const speed = Math.sqrt(dx*dx + dy*dy);
 
-  // 太さは速度に応じて
   let targetWidth=maxWidth-Math.pow(speed*1.3,0.85);
   if(targetWidth<minWidth) targetWidth=minWidth;
   width += (targetWidth - width)*0.2;
@@ -235,18 +234,17 @@ function draw(){
       const p0=points[i];
       const p1=points[i+1];
 
-      const interp=interpolatePoints(p0,p1,3);
+      const interp=interpolatePoints(p0,p1,4);
       interp.forEach((pt,idx)=>{
         const next = interp[idx+1] || p1;
         ctx.beginPath();
         ctx.moveTo(pt.x,pt.y);
         ctx.lineTo(next.x,next.y);
 
-        // 墨感・筆圧
         const w = p0.w*(1-i/points.length*0.6);
         ctx.lineWidth=w;
 
-        const shade = Math.floor(Math.random()*20); // 墨っぽさ
+        const shade = Math.floor(Math.random()*20);
         ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
 
         ctx.lineCap="round";
@@ -257,7 +255,6 @@ function draw(){
     }
   }
 
-  // 蓄積量に応じて少しずつ薄く
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -274,6 +271,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
