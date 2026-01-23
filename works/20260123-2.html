@@ -17,100 +17,91 @@ canvas{display:block}
   position: fixed;
   top: 20px;
   left: 20px;
-  font-size: 1.3rem; /* PCでも大きく */
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  background: rgba(255,255,255,0.1);
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.15);
   border: 2px solid #fff;
   cursor: pointer;
   color: #fff;
   z-index: 2;
   touch-action: manipulation;
-  padding: 12px 20px;
+  padding: 16px 28px;
   border-radius: 6px;
-  min-width: 80px;
-  text-align: center;
 }
-.control-btn:hover {
-  opacity: 0.6;
-}
+.control-btn:hover { opacity:0.6; }
 
-/* スマホ用拡大 */
 @media (max-width:768px){
   .control-btn {
-    font-size: 2rem;  /* 大きく */
-    font-weight: 700;
-    top: 15px;
-    left: 15px;
-    padding: 18px 28px;
-    min-width: 100px;
+    font-size: 2rem;
+    padding: 20px 36px;
   }
 }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-
-<!-- 戻るボタン -->
 <button class="control-btn" onclick="history.back()">戻る</button>
 
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
-function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-addEventListener("resize", resize);
+function resize(){ canvas.width=innerWidth; canvas.height=innerHeight; }
+addEventListener("resize",resize);
 resize();
 
-const rand = (a,b)=>Math.random()*(b-a)+a;
-const pick = a => a[Math.floor(Math.random()*a.length)];
+const rand=(a,b)=>Math.random()*(b-a)+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
 
-const WALL_L = 40;
-const WALL_R = () => canvas.width - 80;
-const FLOOR_Y = () => canvas.height - 40;
+const WALL_L=40;
+const WALL_R=()=>canvas.width-80;
+const FLOOR_Y=()=>canvas.height-40;
 
-const isSP = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isSP=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-// ===== BPM =====
-let bpm = 100;
-const BPM_MIN = 0;
-const BPM_MAX = 200;
-const knob = { x:()=>canvas.width-60, y:()=>canvas.height/2, r:isSP?40:20, dragging:false, hitR: isSP?60:40 };
-function bpmFactor(){ return bpm / 100; }
+let bpm=100;
+const BPM_MIN=0,BPM_MAX=200;
 
-const bodies = [];
+const knob={
+  x:()=>canvas.width-60,
+  y:()=>canvas.height/2,
+  r:isSP?40:20,
+  dragging:false,
+  hitR:isSP?60:40,
+  _currentY:null  // ドラッグ用現在位置を保持
+};
+function bpmFactor(){ return bpm/100; }
+
+const bodies=[];
 
 function color(){ return `hsl(${rand(0,360)},${rand(55,100)}%,${rand(40,70)}%)`; }
 
 class Body{
   constructor(){ this.reset(); }
   reset(){
-    this.r = rand(14,52);
-    this.x = rand(WALL_L+this.r, WALL_R()-this.r);
-    this.y = rand(-canvas.height, -this.r*2);
-    const sizeFactor = this.r / 30;
-    const rareBoost = Math.random()<0.08 ? rand(1.8,2.6) : 1;
-    this.gravityBase = rand(0.08,0.16) * sizeFactor * rareBoost;
-    this.vx = rand(-1,1); this.vy = rand(0.1,0.6) * rareBoost;
-    this.wallRest = rand(0.4,0.85);
-    this.floorRest = rand(0.5,0.8);
-    this.friction = 0.92;
-    this.shape = pick(["circle","square","triangle","diamond","capsule","pentagon"]);
-    this.mode = pick(["fill","stroke"]);
-    this.col = color();
-    this.lineW = rand(1.2,3.6);
-    this.rot = rand(0,Math.PI*2);
-    this.vr = rand(-0.01,0.01);
-    this.scaleX = 1; this.scaleY = 1;
+    this.r=rand(14,52);
+    this.x=rand(WALL_L+this.r,WALL_R()-this.r);
+    this.y=rand(-canvas.height,-this.r*2);
+    const sizeFactor=this.r/30;
+    const rareBoost=Math.random()<0.08?rand(1.8,2.6):1;
+    this.gravityBase=rand(0.08,0.16)*sizeFactor*rareBoost;
+    this.vx=rand(-1,1); this.vy=rand(0.1,0.6)*rareBoost;
+    this.wallRest=rand(0.4,0.85);
+    this.floorRest=rand(0.5,0.8);
+    this.friction=0.92;
+    this.shape=pick(["circle","square","triangle","diamond","capsule","pentagon"]);
+    this.mode=pick(["fill","stroke"]);
+    this.col=color();
+    this.lineW=rand(1.2,3.6);
+    this.rot=rand(0,Math.PI*2);
+    this.vr=rand(-0.01,0.01);
+    this.scaleX=1; this.scaleY=1;
   }
   update(){
-    const f = bpmFactor();
-    this.vy += this.gravityBase * f;
-    this.x += this.vx * f; this.y += this.vy * f;
-    this.rot += this.vr * f;
+    const f=bpmFactor();
+    this.vy+=this.gravityBase*f;
+    this.x+=this.vx*f; this.y+=this.vy*f;
+    this.rot+=this.vr*f;
     if(this.x-this.r<WALL_L){ this.x=WALL_L+this.r; this.vx*=-this.wallRest; }
     if(this.x+this.r>WALL_R()){ this.x=WALL_R()-this.r; this.vx*=-this.wallRest; }
     if(this.y+this.r>FLOOR_Y()){
@@ -119,9 +110,9 @@ class Body{
       this.vx*=this.friction;
       this.scaleY=0.6+0.4*(this.r/52);
       this.scaleX=1.2-0.2*(this.r/52);
-    } else {
-      this.scaleX += (1-this.scaleX)*0.1;
-      this.scaleY += (1-this.scaleY)*0.1;
+    }else{
+      this.scaleX+=(1-this.scaleX)*0.1;
+      this.scaleY+=(1-this.scaleY)*0.1;
     }
     if(this.y-this.r>canvas.height) this.reset();
   }
@@ -134,12 +125,9 @@ class Body{
     switch(this.shape){
       case "circle": ctx.arc(0,0,this.r,0,Math.PI*2); break;
       case "square": ctx.rect(-this.r,-this.r,this.r*2,this.r*2); break;
-      case "triangle":
-        ctx.moveTo(0,-this.r); ctx.lineTo(this.r,this.r); ctx.lineTo(-this.r,this.r); ctx.closePath(); break;
-      case "diamond":
-        ctx.moveTo(0,-this.r); ctx.lineTo(this.r,0); ctx.lineTo(0,this.r); ctx.lineTo(-this.r,0); ctx.closePath(); break;
-      case "capsule":{
-        const w=this.r*1.4,h=this.r*0.8;
+      case "triangle": ctx.moveTo(0,-this.r); ctx.lineTo(this.r,this.r); ctx.lineTo(-this.r,this.r); ctx.closePath(); break;
+      case "diamond": ctx.moveTo(0,-this.r); ctx.lineTo(this.r,0); ctx.lineTo(0,this.r); ctx.lineTo(-this.r,0); ctx.closePath(); break;
+      case "capsule":{ const w=this.r*1.4,h=this.r*0.8;
         ctx.moveTo(-w/2,-h/2); ctx.lineTo(w/2,-h/2); ctx.arc(w/2,0,h/2,-Math.PI/2,Math.PI/2);
         ctx.lineTo(-w/2,h/2); ctx.arc(-w/2,0,h/2,Math.PI/2,-Math.PI/2); ctx.closePath();
       } break;
@@ -172,65 +160,47 @@ function collide(){
   }
 }
 
-// ===== ノブ描画 & 目盛りラベル =====
+// ===== ノブ描画（目盛り数字なし） =====
 function drawBPMKnob(){
   const x=knob.x(), y=knob.y();
   ctx.strokeStyle="rgba(255,255,255,0.25)";
   ctx.lineWidth=isSP?4:2;
-  ctx.beginPath();
-  ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
-
-  ctx.fillStyle="#fff";
-  ctx.font = isSP?"20px Inter":"14px Inter";
-  ctx.textAlign="right";
-  ctx.textBaseline="middle";
-
-  for(let v=0;v<=BPM_MAX;v+=20){
-    const t=v/BPM_MAX, my=y+100-t*200;
-    ctx.beginPath();
-    ctx.moveTo(x-15,my); ctx.lineTo(x+15,my); ctx.stroke();
-    ctx.fillText(v,x-20,my); // 文字ラベル
-  }
+  ctx.beginPath(); ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
 
   const t=bpm/BPM_MAX, ky=y+100-t*200;
   ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
 }
 
-// ===== マウス & タッチ操作（常に掴める判定） =====
+// ===== マウス・タッチ操作（常に掴める） =====
 function startDrag(x,y){
   const kx=knob.x(), ky=knob.y();
-  // 判定を広くする（hitR）
-  if(Math.hypot(x-kx,y-ky)<=knob.hitR) knob.dragging=true;
+  if(Math.hypot(x-kx,y-ky)<=knob.hitR) { knob.dragging=true; knob._currentY=y; }
 }
 function moveDrag(y){
   if(!knob.dragging)return;
   const minY=knob.r+100, maxY=canvas.height-knob.r-100;
   y=Math.max(minY,Math.min(maxY,y));
+  knob._currentY=y;
   bpm=Math.round(BPM_MAX-((y-(knob.y()-100))/200)*(BPM_MAX-BPM_MIN));
 }
 
 canvas.addEventListener("mousedown",e=>{
   const r=canvas.getBoundingClientRect();
-  startDrag(e.clientX-r.left, e.clientY-r.top);
+  startDrag(e.clientX-r.left,e.clientY-r.top);
 });
 canvas.addEventListener("touchstart",e=>{
   if(e.touches.length===1){
     const r=canvas.getBoundingClientRect();
-    startDrag(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top);
+    startDrag(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);
   }
-}, {passive:false});
+},{passive:false});
 
-addEventListener("mousemove",e=>{
-  const r=canvas.getBoundingClientRect();
-  moveDrag(e.clientY-r.top);
-});
+addEventListener("mousemove",e=>{ moveDrag(e.clientY-canvas.getBoundingClientRect().top); });
 addEventListener("touchmove",e=>{
-  if(e.touches.length===1){
-    e.preventDefault();
-    const r=canvas.getBoundingClientRect();
-    moveDrag(e.touches[0].clientY-r.top);
+  if(e.touches.length===1){ e.preventDefault();
+    moveDrag(e.touches[0].clientY-canvas.getBoundingClientRect().top);
   }
-}, {passive:false});
+},{passive:false});
 
 addEventListener("mouseup",()=>knob.dragging=false);
 addEventListener("touchend",()=>knob.dragging=false);
@@ -259,5 +229,6 @@ loop();
 </script>
 </body>
 </html>
+
 
 
