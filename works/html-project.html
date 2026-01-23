@@ -50,8 +50,8 @@ h1 {
   display:flex; 
   flex-direction:column; 
   gap:16px;
-  align-items:flex-start;   /* PCは左揃え */
-  margin-top:20px;
+  align-items:flex-start;   /* PC左揃え */
+  margin-top:0;             /* ← ここを0にしてWORKSに揃え */
 }
 
 .button-link {
@@ -105,11 +105,11 @@ h1 {
     font-size:1rem; 
   }
 
-  .button-container {
+  .button-container{
     align-items:center;   /* ボタンだけ中央 */
   }
 
-  .button-link {
+  .button-link{
     width:70%;
     max-width:250px;
     height:80px;
@@ -125,6 +125,7 @@ h1 {
 
   <h1>HTML</h1>
 
+  <!-- 20260123① -->
   <div class="section">
     20260123①
     <div class="button-container">
@@ -132,6 +133,7 @@ h1 {
     </div>
   </div>
 
+  <!-- 20260123② -->
   <div class="section">
     20260123②
     <div class="button-container">
@@ -139,6 +141,7 @@ h1 {
     </div>
   </div>
 
+  <!-- 戻る -->
   <div class="section">
     戻る
     <div class="button-container home-button-container">
@@ -250,6 +253,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
