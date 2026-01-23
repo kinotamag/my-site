@@ -98,8 +98,7 @@ h1{
 </div>
 
 <script>
-
-/* ===== FREEZE（表示領域のみ正確保存） ===== */
+/* ===== FREEZE ===== */
 function saveImage(){
   html2canvas(document.body,{
     width:window.innerWidth,
@@ -124,7 +123,6 @@ function resetCanvas(){
 }
 
 /* ===== 描画 ===== */
-
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 
@@ -141,22 +139,26 @@ let lastPen={x:pen.x,y:pen.y};
 
 const ease=0.22;
 const maxWidth=25;
-const minWidth=0.5;
+const minWidth=2; // 最細を少し太く
 let width=maxWidth;
 
 let points=[];
 let drawCount=0;
 const maxDraw=450;
 
+// マウス
 window.addEventListener("mousemove",e=>{
   mouse.x=e.clientX;
   mouse.y=e.clientY;
 });
 
+// スマホ
 window.addEventListener("touchstart",e=>{
   const t=e.touches[0];
   mouse.x=t.clientX;
   mouse.y=t.clientY;
+  // 最初の点を追加して自然に墨を乗せる
+  points.push({x:mouse.x, y:mouse.y, w:maxWidth});
 },{passive:true});
 
 window.addEventListener("touchmove",e=>{
@@ -165,8 +167,10 @@ window.addEventListener("touchmove",e=>{
   mouse.y=t.clientY;
 },{passive:true});
 
-function draw(){
+// 軽量化
+const maxPoints=20;
 
+function draw(){
   pen.x+=(mouse.x-pen.x)*ease;
   pen.y+=(mouse.y-pen.y)*ease;
 
@@ -178,8 +182,12 @@ function draw(){
   if(targetWidth<minWidth) targetWidth=minWidth;
   width+=(targetWidth-width)*0.2;
 
-  points.push({x:pen.x,y:pen.y,w:width});
-  if(points.length>20) points.shift();
+  // 大きすぎる飛び点は無視
+  const dist=Math.sqrt((pen.x-lastPen.x)**2+(pen.y-lastPen.y)**2);
+  if(dist<150){ 
+    points.push({x:pen.x, y:pen.y, w:width});
+  }
+  if(points.length>maxPoints) points.shift();
 
   if(points.length>=2){
     for(let i=0;i<points.length-1;i++){
@@ -202,6 +210,7 @@ function draw(){
     }
   }
 
+  // 蓄積量による徐々に薄く
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -218,6 +227,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
