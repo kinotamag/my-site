@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Google Font -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
@@ -12,10 +11,10 @@ body {
   margin:0;
   overflow:hidden;
   background:white;
-  font-family: 'Inter', sans-serif;
+  font-family:'Inter', sans-serif;
 }
 
-/* ===== 背景canvas ===== */
+/* ===== 背景 ===== */
 canvas {
   position:fixed;
   top:0;
@@ -24,15 +23,16 @@ canvas {
   display:block;
 }
 
-/* ===== テキストレイヤー ===== */
+/* ===== テキスト ===== */
 .content {
   position:relative;
   z-index:1;
   height:100vh;
   display:flex;
   flex-direction:column;
-  justify-content:center;
+  justify-content:flex-start;
   padding-left:10vw;
+  padding-top:10vh;
   color:#111;
   opacity:0;
   animation:fadeIn 1.2s ease forwards;
@@ -62,20 +62,25 @@ h1 {
   margin-top:14px;
   font-size:1rem;
   letter-spacing:0.08em;
-  cursor:pointer;
+  text-decoration:none;
+  color:#111;
   user-select:none;
 }
 
-/* メールコピー */
-.copy-btn {
-  margin-top:20px;
-  font-size:0.8rem;
-  letter-spacing:0.15em;
+.freeze-btn {
+  margin-top:40px;
+  font-size:0.75rem;
+  letter-spacing:0.2em;
   background:none;
   border:none;
   padding:0;
   cursor:pointer;
   color:#111;
+  user-select:none;
+}
+
+.freeze-btn:hover {
+  opacity:0.6;
 }
 
 @keyframes fadeIn {
@@ -92,24 +97,31 @@ h1 {
   <div class="subtitle">composer / visual</div>
 
   <div class="section">WORKS</div>
-  <div class="item">01</div>
-  <div class="item">02</div>
+  <a href="#" class="item">01</a>
+  <a href="#" class="item">02</a>
 
   <div class="section">CONTACT</div>
-  <button class="copy-btn" onclick="copyMail()">copy email</button>
+  <button class="freeze-btn" onclick="saveImage()">FREEZE</button>
 </div>
 
 <script>
-// ===== メールコピー =====
-function copyMail() {
-  navigator.clipboard.writeText("mail@example.com");
+/* ===== FREEZE ===== */
+function saveImage() {
+  const link = document.createElement("a");
+  link.download = "trace.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
 }
 
-// ===== 背景アニメーション =====
+/* ===== 背景アニメーション ===== */
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+
+function resize() {
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
 
 let mouse = { x: canvas.width/2, y: canvas.height/2 };
 let pen = { x: mouse.x, y: mouse.y };
@@ -127,7 +139,9 @@ window.addEventListener("mousemove", e => {
 
 let points = [];
 
-function noise(val) { return (Math.random()-0.5)*val; }
+function noise(val) {
+  return (Math.random() - 0.5) * val;
+}
 
 function draw() {
   ctx.fillStyle = "rgba(255,255,255,0.04)";
@@ -185,13 +199,11 @@ function draw() {
 
 draw();
 
-window.addEventListener("resize", () => {
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-});
+window.addEventListener("resize", resize);
 </script>
 
 </body>
 </html>
+
 
 
