@@ -2,7 +2,8 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Modern Art with Speed Knob</title>
+<title>Modern Art with Slow Speed Knob</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
 html,body{
   margin:0;
@@ -10,81 +11,92 @@ html,body{
   height:100%;
   overflow:hidden;
   background:#0b0c10;
+  font-family:'Inter',sans-serif;
 }
 canvas{display:block;}
+
+/* 戻るボタン */
+.control-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  font-size: 2rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid #fff;
+  cursor: pointer;
+  color: #fff;
+  z-index: 2;
+  touch-action: manipulation;
+  padding: 16px 28px;
+  border-radius: 6px;
+}
+.control-btn:hover { opacity:0.6; }
+
+@media (max-width:768px){
+  .control-btn {
+    font-size: 2.6rem;
+    padding: 24px 36px;
+  }
+}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<script>
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
+<button class="control-btn" onclick="history.back()">戻る</button>
 
-function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener("resize", resize);
+<script>
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
+
+function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+window.addEventListener("resize",resize);
 resize();
 
-const rand = (a,b)=>Math.random()*(b-a)+a;
-const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+const isSP=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+const rand=(a,b)=>Math.random()*(b-a)+a;
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 
 function randomColor(){
-  return `hsla(${rand(0,360)},${rand(60,100)}%,${rand(40,80)}%,${rand(0.1,0.5)})`;
+  return `hsla(${rand(0,360)},${rand(60,100)}%,${rand(40,80)}%,${rand(0.05,0.25)})`;
 }
 
 // ===== ノブ =====
-let speed = 1; // 描画速度倍率
-const knob = {
-  x: () => canvas.width-60,
-  y: () => canvas.height/2,
-  r: 20,
+let speed=0.05; // 初期ゆっくり
+const knob={
+  x:()=>isSP?canvas.width-140:canvas.width-60,
+  y:canvas.height/2,
+  width:isSP?60:20,
+  height:200,
+  r: isSP?30:20,
   dragging:false,
-  min:0,   // 完全停止
-  max:1    // 最大描画速度（500個/フレーム相当）
+  min:0.01,
+  max:0.2
 };
 
 // ===== メインループ描画 =====
 function drawArt(){
-  // 背景を透過で残す
-  ctx.fillStyle = "rgba(11,12,16,0.1)";
+  // 背景を少し残す
+  ctx.fillStyle = "rgba(11,12,16,0.25)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  const drawCount = Math.floor(500*speed); // ノブで描画量を調整
+  const drawCount = Math.floor(50*speed); // 全体的に少なめ
   for(let i=0;i<drawCount;i++){
-    const x = rand(0,canvas.width);
-    const y = rand(0,canvas.height);
-    const r = rand(10,100);
-    const angle = rand(0,Math.PI*2);
-    const col = randomColor();
+    const x=rand(0,canvas.width);
+    const y=rand(0,canvas.height);
+    const r=rand(2,6); // 星くらい小さめ
+    const angle=rand(0,Math.PI*2);
+    const col=randomColor();
 
     ctx.save();
     ctx.translate(x,y);
     ctx.rotate(angle);
-    ctx.shadowColor = "rgba(255,255,255,0.3)";
-    ctx.shadowBlur = rand(5,20);
-
     ctx.beginPath();
-    const shapeType = pick(["circle","triangle","square","line","arc"]);
+    const shapeType=pick(["circle","line"]);
     switch(shapeType){
-      case "circle":
-        ctx.arc(0,0,r,0,Math.PI*2);
-        ctx.fillStyle = col; ctx.fill();
-        break;
-      case "triangle":
-        ctx.moveTo(0,-r); ctx.lineTo(r, r); ctx.lineTo(-r, r); ctx.closePath();
-        ctx.fillStyle = col; ctx.fill();
-        break;
-      case "square":
-        ctx.fillStyle = col; ctx.fillRect(-r,-r,r*2,r*2); break;
-      case "line":
-        ctx.strokeStyle = col; ctx.lineWidth = rand(1,5);
-        ctx.moveTo(-r,-r); ctx.lineTo(r,r); ctx.stroke(); break;
-      case "arc":
-        ctx.strokeStyle = col; ctx.lineWidth = rand(1,4);
-        ctx.arc(0,0,r,rand(0,Math.PI*2),rand(0,Math.PI*2)); ctx.stroke();
-        break;
+      case"circle": ctx.arc(0,0,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill(); break;
+      case"line": ctx.strokeStyle=col; ctx.lineWidth=rand(0.5,1.5); ctx.moveTo(-r,0); ctx.lineTo(r,0); ctx.stroke(); break;
     }
     ctx.restore();
   }
@@ -92,9 +104,9 @@ function drawArt(){
 
 // ===== ノブ描画 =====
 function drawKnob(){
-  const x = knob.x();
-  const y = knob.y();
-  const h = 200;
+  const x=knob.x();
+  const y=knob.y;
+  const h=knob.height;
 
   // 線メモリ
   ctx.strokeStyle="rgba(255,255,255,0.2)";
@@ -102,44 +114,34 @@ function drawKnob(){
   ctx.beginPath();
   ctx.moveTo(x,y-h/2); ctx.lineTo(x,y+h/2); ctx.stroke();
 
-  // メモリ
-  for(let v=0;v<=1;v+=0.1){
-    const t = v;
-    const yy = y+h/2 - t*h;
-    ctx.beginPath();
-    ctx.lineWidth = (v===1)?2:1;
-    ctx.moveTo(x-12,yy); ctx.lineTo(x+12,yy); ctx.stroke();
-  }
-
-  // 現在値の丸
-  const t = (speed-knob.min)/(knob.max-knob.min);
-  const ky = y+h/2 - t*h;
-  ctx.fillStyle="white";
-  ctx.beginPath();
-  ctx.arc(x,ky,knob.r,0,Math.PI*2);
-  ctx.fill();
+  // ノブ本体
+  ctx.fillStyle = isSP ? 'rgba(255,255,255,0.6)' : 'white';
+  ctx.fillRect(x-knob.width/2, y-knob.r, knob.width, knob.r*2);
 }
 
-// ===== マウス操作 =====
-canvas.addEventListener("mousedown", e=>{
-  const r = canvas.getBoundingClientRect();
-  const mx = e.clientX-r.left;
-  const my = e.clientY-r.top;
-  const x = knob.x(), y = knob.y(), h=200;
-  if(mx>x-knob.r*2 && mx<x+knob.r*2 && my>y-h/2-knob.r && my<y+h/2+knob.r){
-    knob.dragging=true;
-  }
-});
-window.addEventListener("mouseup", ()=>knob.dragging=false);
-window.addEventListener("mousemove", e=>{
+// ===== ドラッグ処理 =====
+function startDrag(x,y){
+  const dx=x-knob.x();
+  const dy=y-knob.y;
+  const hitWidth=knob.width + (isSP?60:0);
+  const hitHeight=knob.height + (isSP?60:0);
+  if(Math.abs(dx)<=hitWidth/2 && Math.abs(dy)<=hitHeight/2) knob.dragging=true;
+}
+function moveDrag(y){
   if(!knob.dragging) return;
-  const r = canvas.getBoundingClientRect();
-  const my = Math.max(knob.y()-100+knob.r, Math.min(knob.y()+100-knob.r, e.clientY-r.top));
-  const h = 200-knob.r*2;
-  speed = knob.max - ((my-(knob.y()-100+knob.r))/h)*(knob.max-knob.min);
-  if(speed<0) speed=0;
-  if(speed>knob.max) speed=knob.max;
-});
+  const minY=knob.r;
+  const maxY=canvas.height-knob.r;
+  knob.y=Math.max(minY,Math.min(maxY,y));
+  const t=(knob.y-minY)/(maxY-minY);
+  speed=knob.max - t*(knob.max-knob.min);
+}
+
+canvas.addEventListener("mousedown",e=>startDrag(e.clientX,e.clientY));
+canvas.addEventListener("touchstart",e=>{ if(e.touches.length===1) startDrag(e.touches[0].clientX,e.touches[0].clientY); },{passive:false});
+window.addEventListener("mousemove",e=>moveDrag(e.clientY));
+window.addEventListener("touchmove",e=>{ if(e.touches.length===1){ e.preventDefault(); moveDrag(e.touches[0].clientY); } },{passive:false});
+window.addEventListener("mouseup",()=>knob.dragging=false);
+window.addEventListener("touchend",()=>knob.dragging=false);
 
 // ===== メインループ =====
 function loop(){
@@ -151,3 +153,4 @@ loop();
 </script>
 </body>
 </html>
+
