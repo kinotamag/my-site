@@ -17,7 +17,8 @@ canvas{display:block}
   position: fixed;
   top: 20px;
   left: 20px;
-  font-size: 0.9rem;
+  font-size: 1.1rem; /* PCでも見やすく */
+  font-weight: 500;
   letter-spacing: 0.2em;
   background: none;
   border: none;
@@ -25,7 +26,7 @@ canvas{display:block}
   color: #fff;
   z-index: 2;
   touch-action: manipulation;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 4px;
 }
 .control-btn:hover {
@@ -35,10 +36,11 @@ canvas{display:block}
 /* スマホ用拡大 */
 @media (max-width:768px){
   .control-btn {
-    font-size: 1.3rem;
+    font-size: 1.6rem;  /* 大きく */
+    font-weight: 600;
     top: 15px;
     left: 15px;
-    padding: 10px 14px;
+    padding: 12px 18px;
   }
 }
 </style>
@@ -67,7 +69,6 @@ const WALL_L = 40;
 const WALL_R = () => canvas.width - 80;
 const FLOOR_Y = () => canvas.height - 40;
 
-// デバイス判定
 const isSP = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 // ===== BPM =====
@@ -168,17 +169,27 @@ function collide(){
   }
 }
 
-// ===== ノブ描画 =====
+// ===== ノブ描画 & 目盛りラベル =====
 function drawBPMKnob(){
   const x=knob.x(), y=knob.y();
   ctx.strokeStyle="rgba(255,255,255,0.25)";
-  ctx.lineWidth=2;
+  ctx.lineWidth=isSP?4:2;
   ctx.beginPath();
   ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
+
+  ctx.fillStyle="#fff";
+  ctx.font = isSP?"18px Inter":"14px Inter";
+  ctx.textAlign="left";
+  ctx.textBaseline="middle";
+
   for(let v=0;v<=BPM_MAX;v+=20){
     const t=v/BPM_MAX, my=y+100-t*200;
-    ctx.beginPath(); ctx.moveTo(x-6,my); ctx.lineTo(x+6,my); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x-10,my); ctx.lineTo(x+10,my); ctx.stroke();
+    ctx.fillText(v,my+0); // 目盛りラベル
+    ctx.fillText(v,x+14,my); // 文字ラベル
   }
+
   const t=bpm/BPM_MAX, ky=y+100-t*200;
   ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
 }
@@ -200,50 +211,7 @@ canvas.addEventListener("mousedown",e=>{
   startDrag(e.clientX-r.left, e.clientY-r.top);
 });
 canvas.addEventListener("touchstart",e=>{
-  if(e.touches.length===1){
-    const r=canvas.getBoundingClientRect();
-    startDrag(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top);
-  }
-}, {passive:false});
+  if(e.
 
-addEventListener("mousemove",e=>{
-  const r=canvas.getBoundingClientRect();
-  moveDrag(e.clientY-r.top);
-});
-addEventListener("touchmove",e=>{
-  if(e.touches.length===1){
-    e.preventDefault();
-    const r=canvas.getBoundingClientRect();
-    moveDrag(e.touches[0].clientY-r.top);
-  }
-}, {passive:false});
-
-addEventListener("mouseup",()=>knob.dragging=false);
-addEventListener("touchend",()=>knob.dragging=false);
-
-// ===== 生成 =====
-setInterval(()=>{ if(bodies.length<140) bodies.push(new Body()); }, rand(160,360));
-
-function drawWalls(){ ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2;
-ctx.beginPath(); ctx.moveTo(WALL_L,0); ctx.lineTo(WALL_L,canvas.height);
-ctx.moveTo(WALL_R(),0); ctx.lineTo(WALL_R(),canvas.height); ctx.stroke(); }
-
-function drawFloor(){ ctx.strokeStyle="rgba(255,255,255,0.15)"; ctx.lineWidth=3;
-ctx.beginPath(); ctx.moveTo(0,FLOOR_Y()); ctx.lineTo(canvas.width,FLOOR_Y()); ctx.stroke(); }
-
-function loop(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  bodies.forEach(b=>b.update());
-  collide();
-  bodies.forEach(b=>b.draw());
-  drawWalls();
-  drawFloor();
-  drawBPMKnob();
-  requestAnimationFrame(loop);
-}
-loop();
-</script>
-</body>
-</html>
 
 
