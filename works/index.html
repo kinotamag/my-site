@@ -20,12 +20,14 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 .section { margin-top:60px; font-size:0.75rem; letter-spacing:0.2em; }
 .item { margin-top:14px; font-size:1rem; letter-spacing:0.08em; text-decoration:none; color:#111; }
 a { color:#111; text-decoration:none; }
+iframe { margin-top:20px; border:none; }
 @media (max-width: 768px){
   .content { padding-top:15vh; padding-left:5vw; }
   h1{ font-size:3rem; }
   .subtitle{ font-size:1.2rem; }
   .section{ font-size:1rem; }
   .item{ font-size:1.2rem; margin-top:18px; }
+  iframe { width:100%; height:auto; }
 }
 </style>
 </head>
@@ -35,8 +37,18 @@ a { color:#111; text-decoration:none; }
   <h1>WORKS</h1>
   <div class="subtitle">🥚🥚 🥚</div>
 
-  <div class="section">作品一覧</div>
-  <p>ここに作品リストを追加します。</p>
+  <div class="section">YouTube</div>
+  <!-- kinotamag チャンネルの最新動画埋め込み -->
+  <iframe width="300" height="169" 
+    src="https://www.youtube.com/embed?listType=user_uploads&list=UClLZp4tJ0nB3y3O9rtuEwSA" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+  </iframe>
+
+  <div class="section">SoundCloud</div>
+  <!-- kinotamag ユーザーの埋め込みプレイヤー -->
+  <iframe width="100%" height="300" scrolling="no" 
+    src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kinotamag&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true">
+  </iframe>
 
   <p><a href="../index.html">← Back to Home</a></p>
 </div>
@@ -77,8 +89,8 @@ function draw(){
   points.push({x:pen.x, y:pen.y, w:width});
   if(points.length > 50) points.shift();
 
-  // 薄くなる速度を早める
-  ctx.fillStyle = "rgba(255,255,255,0.08)"; // 0.08で速く消える
+  // 軌跡を黒寄りで早めに薄く
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   for(let i=0;i<points.length-1;i++){
@@ -115,4 +127,5 @@ draw();
 </script>
 </body>
 </html>
+
 
