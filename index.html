@@ -25,22 +25,30 @@ body{
   touch-action:none;
 }
 
+#capture-area{
+  position:relative;
+  width:100vw;
+  height:100vh;
+}
+
 canvas{
-  position:fixed;
+  position:absolute;
   top:0;
   left:0;
   z-index:0;
 }
 
 .content{
-  position:relative;
+  position:absolute;
+  top:0;
+  left:0;
   z-index:1;
-  min-height:100vh;
+  min-height:100%;
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
   padding-left:10vw;
-  padding-top:10vh;
+  padding-top:9vh;
   color:#111;
 }
 
@@ -87,148 +95,112 @@ h1{
   opacity:0.6;
 }
 
-/* ===== スマホ対応 ===== */
+/* スマホ */
 @media (max-width: 768px){
   .content{
     padding-top:15vh;
     padding-left:5vw;
   }
-  h1{
-    font-size:3rem;
-  }
-  .subtitle{
-    font-size:1.2rem;
-  }
-  .section{
-    font-size:1rem;
-  }
-  .item{
-    font-size:1.2rem;
-    margin-top:18px;
-  }
-  .control-btn{
-    font-size:1rem;
-    margin-top:50px;
-  }
+  h1{ font-size:3rem; }
+  .subtitle{ font-size:1.2rem; }
+  .section{ font-size:1rem; }
+  .item{ font-size:1.2rem; margin-top:18px; }
+  .control-btn{ font-size:1rem; margin-top:50px; }
 }
 </style>
 </head>
 <body>
 
-<canvas id="canvas"></canvas>
+<div id="capture-area">
+  <canvas id="canvas"></canvas>
 
-<div class="content">
-  <h1>kinotamag</h1>
-  <div class="subtitle">🥚🥚 🥚</div>
+  <div class="content">
+    <h1>kinotamag</h1>
+    <div class="subtitle">🥚🥚 🥚</div>
 
-  <div class="section">WORKS</div>
-  <a href="#" class="item">01</a>
-  <a href="#" class="item">02</a>
+    <div class="section">WORKS</div>
+    <a href="#" class="item">01</a>
+    <a href="#" class="item">02</a>
 
-  <div class="section">CONTACT</div>
+    <div class="section">CONTACT</div>
 
-  <div>
-    <button class="control-btn" onclick="saveImage()">FREEZE</button>
-    <button class="control-btn" onclick="resetCanvas()">RESET</button>
+    <div>
+      <button class="control-btn" onclick="saveImage()">FREEZE</button>
+      <button class="control-btn" onclick="resetCanvas()">RESET</button>
+    </div>
   </div>
 </div>
 
 <script>
-/* ===== FREEZE ===== */
-function saveImage(){
-  html2canvas(document.body, {useCORS:true}).then(canvasImage=>{
-    const link=document.createElement("a");
-    link.download="trail.png";
-    link.href=canvasImage.toDataURL();
-    link.click();
-  });
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
 
-/* ===== RESET ===== */
-function resetCanvas(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawCount=0;
-  points=[];
-}
-
-/* ===== 背景アニメーション ===== */
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
-
-function resize(){
-  canvas.width=innerWidth;
-  canvas.height=innerHeight;
-}
-resize();
-
-let mouse={x:canvas.width/2,y:canvas.height/2};
-let pen={x:mouse.x,y:mouse.y};
-let lastPen={x:pen.x,y:pen.y};
+let mouse = {x:canvas.width/2, y:canvas.height/2};
+let pen = {x:mouse.x, y:mouse.y};
+let lastPen = {x:pen.x, y:pen.y};
 
 const ease=0.22;
-const maxWidthPC=25;
-const maxWidthSP=18;
+const maxWidth=25;
 const minWidth=0.5;
+let width=maxWidth;
 
-let width=maxWidthPC;
 let points=[];
 let drawCount=0;
-const maxDraw=500;
+const maxDraw=450;
 
-/* ===== PC追従 ===== */
+// PC
 window.addEventListener("mousemove", e=>{
-  mouse.x=e.clientX;
-  mouse.y=e.clientY;
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
 });
 
-/* ===== スマホ追従 ===== */
+// スマホ
 window.addEventListener("touchstart", e=>{
-  if(e.touches.length===1){
-    mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY;
-  }
+  mouse.x = e.touches[0].clientX;
+  mouse.y = e.touches[0].clientY;
 });
 window.addEventListener("touchmove", e=>{
-  if(e.touches.length===1){
-    mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY;
-    e.preventDefault(); // スクロール抑制
-  }
-});
+  e.preventDefault(); // スクロール防止
+  mouse.x = e.touches[0].clientX;
+  mouse.y = e.touches[0].clientY;
+}, {passive:false});
 
-/* ===== 描画 ===== */
+const maxPoints=10; // 軽量化
+
 function draw(){
-  // ターゲット幅
-  const maxWidth=(window.innerWidth<=768)?maxWidthSP:maxWidthPC;
+  pen.x += (mouse.x - pen.x) * ease;
+  pen.y += (mouse.y - pen.y) * ease;
 
-  pen.x+=(mouse.x-pen.x)*ease;
-  pen.y+=(mouse.y-pen.y)*ease;
+  const dx = pen.x - lastPen.x;
+  const dy = pen.y - lastPen.y;
+  const speed = Math.sqrt(dx*dx + dy*dy);
 
-  const dx=pen.x-lastPen.x;
-  const dy=pen.y-lastPen.y;
-  const speed=Math.sqrt(dx*dx+dy*dy);
-
-  let targetWidth=maxWidth-Math.pow(speed*1.3,0.85);
+  let targetWidth = maxWidth - Math.pow(speed*1.3,0.85);
   if(targetWidth<minWidth) targetWidth=minWidth;
-  width+=(targetWidth-width)*0.2;
+  width += (targetWidth - width)*0.2;
 
   points.push({x:pen.x, y:pen.y, w:width});
-  if(points.length>20) points.shift();
+  if(points.length>maxPoints) points.shift();
 
   if(points.length>=2){
     for(let i=0;i<points.length-1;i++){
-      const p1=points[i+1];
-
+      const p1 = points[i+1];
       ctx.beginPath();
       ctx.moveTo(points[i].x, points[i].y);
       ctx.lineTo(p1.x, p1.y);
 
-      // 墨感残す
-      const w=p1.w*(1 - i/points.length*0.5);
-      ctx.lineWidth=w;
-      const shade=Math.floor(Math.random()*20);
-      ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
+      const w = p1.w*(1-i/points.length*0.6);
+      ctx.lineWidth = w;
 
+      const shade = Math.floor(Math.random()*6);
+      ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
       ctx.lineCap="round";
       ctx.stroke();
 
@@ -236,7 +208,6 @@ function draw(){
     }
   }
 
-  // 蓄積量で徐々に薄く
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -250,11 +221,27 @@ function draw(){
 
 draw();
 
-window.addEventListener("resize", resize);
+function resetCanvas(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  points=[];
+  drawCount=0;
+}
+
+/* ===== FREEZE ===== */
+function saveImage(){
+  const capture = document.getElementById("capture-area");
+  html2canvas(capture, {useCORS:true}).then(canvasImage=>{
+    const link = document.createElement("a");
+    link.download = "trail.png";
+    link.href = canvasImage.toDataURL();
+    link.click();
+  });
+}
 </script>
 
 </body>
 </html>
+
 
 
 
