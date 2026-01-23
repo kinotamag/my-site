@@ -12,6 +12,17 @@ body{
   margin:0;
   background:white;
   font-family:'Inter',sans-serif;
+
+  /* テキスト選択禁止 */
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  user-select:none;
+}
+
+/* 画像ドラッグも無効 */
+*{
+  -webkit-user-drag:none;
 }
 
 canvas{
@@ -195,6 +206,7 @@ window.addEventListener("resize",resize);
 
 </body>
 </html>
+
 
 
 
