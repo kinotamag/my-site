@@ -144,14 +144,14 @@ let mouse={x:canvas.width/2,y:canvas.height/2};
 let pen={x:mouse.x, y:mouse.y};
 let lastPen={x:pen.x, y:pen.y};
 
-const ease=0.25; // 追従
+const ease=0.3;
 const maxWidth=25;
 const minWidth=0.5;
 let width=maxWidth;
 
 let points=[];
 let drawCount=0;
-const maxDraw=600; // 蓄積量上限
+const maxDraw=600;
 
 /* ===== 補間関数 ===== */
 function interpolatePoints(p0,p1,segments){
@@ -191,9 +191,9 @@ window.addEventListener("touchmove", e=>{
   if(e.touches.length===1 && isDrawing){
     mouse.x=e.touches[0].clientX;
     mouse.y=e.touches[0].clientY;
-    e.preventDefault(); // 描画中スクロール防止
   }
-});
+  e.preventDefault(); // **スクロール完全無効**
+}, {passive:false});
 
 window.addEventListener("touchend", e=>{
   if(e.touches.length===0) isDrawing=false;
@@ -214,14 +214,14 @@ function draw(){
   width += (targetWidth - width)*0.2;
 
   points.push({x:pen.x,y:pen.y,w:width});
-  if(points.length>10) points.shift();
+  if(points.length>8) points.shift();
 
   if(points.length>=2){
     for(let i=0;i<points.length-1;i++){
       const p0=points[i];
       const p1=points[i+1];
 
-      const interp=interpolatePoints(p0,p1,6); // 補間増加で滑らか
+      const interp=interpolatePoints(p0,p1,4);
       interp.forEach((pt,idx)=>{
         const next = interp[idx+1] || p1;
         ctx.beginPath();
@@ -231,7 +231,7 @@ function draw(){
         const w = p0.w*(1-i/points.length*0.6);
         ctx.lineWidth=w;
 
-        const shade = Math.floor(Math.random()*20);
+        const shade = Math.floor(Math.random()*12);
         ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
 
         ctx.lineCap="round";
@@ -242,7 +242,6 @@ function draw(){
     }
   }
 
-  // 蓄積量に応じて薄める
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -259,6 +258,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
