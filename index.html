@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 body {
   margin:0;
@@ -37,10 +38,24 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   <div class="content">
     <h1>kinotamag</h1>
     <div class="subtitle">🥚🥚 🥚</div>
-    <div class="section">WORKS</div>
-    <a href="#" class="item">01</a>
-    <a href="#" class="item">02</a>
-    <div class="section">CONTACT</div>
+
+    <!-- WORKS -->
+    <div class="section">
+      <a href="works/index.html" class="item">WORKS</a>
+    </div>
+    <a href="works/01.html" class="item">01</a>
+    <!-- 他のWORKSページはここに追加 -->
+
+    <!-- MEMO -->
+    <div class="section">
+      <a href="memo/index.html" class="item">MEMO</a>
+    </div>
+
+    <!-- CONTACT -->
+    <div class="section">
+      <a href="contact/index.html" class="item">CONTACT</a>
+    </div>
+
     <div>
       <button class="control-btn" id="freezeBtn">FREEZE</button>
       <button class="control-btn" id="resetBtn">RESET</button>
@@ -61,13 +76,9 @@ let width = maxWidth;
 let mouse = { x: window.innerWidth/2, y: window.innerHeight/2 };
 let pen = { x: mouse.x, y: mouse.y };
 let lastPen = { x: pen.x, y: pen.y };
-
 let points = [];
 
-function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener("resize", resize);
 
@@ -83,7 +94,7 @@ function saveImage() {
       link.href = canvasImage.toDataURL();
       link.click();
     });
-  }, 100); // 100ms 待って描画を反映
+  }, 100);
 }
 
 function resetCanvas() {
@@ -112,11 +123,9 @@ function draw(){
   points.push({x: pen.x, y: pen.y, w: width});
   if(points.length > 100) points.shift();
 
-  // 微かに白で残像を薄くする
   ctx.fillStyle = "rgba(255,255,255,0.02)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // 点を描画
   for(let i=0;i<points.length-1;i++){
     const p0 = points[i];
     const p1 = points[i+1];
@@ -151,6 +160,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
