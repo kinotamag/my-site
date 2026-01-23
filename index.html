@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -10,18 +10,16 @@
 <style>
 body{
   margin:0;
-  background:white;
   font-family:'Inter',sans-serif;
+  user-select:none;
   -webkit-user-select:none;
   -moz-user-select:none;
   -ms-user-select:none;
-  user-select:none;
-  overflow-y: auto; /* ページスクロール可能 */
+  overflow-y:auto;
 }
 
 *{
-  -webkit-user-drag:none;
-  touch-action:none; /* JSでタッチ判定 */
+  touch-action:none; /* 1本指描画・2本指スクロールをJSで判定 */
 }
 
 canvas{
@@ -34,39 +32,35 @@ canvas{
 .content{
   position:relative;
   z-index:1;
-  min-height:200vh; /* 下にスクロールできる高さ確保 */
+  min-height:200vh; /* 下までスクロール可能に */
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
   padding-left:10vw;
-  padding-top:15vh; /* タイトル少し上寄せ */
+  padding-top:15vh;
   color:#111;
 }
 
 h1{
   font-size:2.6rem;
   font-weight:500;
-  letter-spacing:0.12em;
   margin:0;
 }
 
 .subtitle{
   margin-top:10px;
   font-weight:400;
-  letter-spacing:0.15em;
   font-size:1rem;
 }
 
 .section{
   margin-top:60px;
   font-size:0.8rem;
-  letter-spacing:0.2em;
 }
 
 .item{
   margin-top:14px;
   font-size:1rem;
-  letter-spacing:0.08em;
   text-decoration:none;
   color:#111;
 }
@@ -74,7 +68,6 @@ h1{
 .control-btn{
   margin-top:40px;
   font-size:0.75rem;
-  letter-spacing:0.2em;
   background:none;
   border:none;
   cursor:pointer;
@@ -86,29 +79,17 @@ h1{
   opacity:0.6;
 }
 
-/* ===== スマホ用 ===== */
-@media (max-width: 768px){
+/* スマホ用 */
+@media (max-width:768px){
   .content{
-    padding-top:18vh; /* タイトル上寄せ */
+    padding-top:18vh;
     padding-left:5vw;
   }
-  h1{
-    font-size:3rem;
-  }
-  .subtitle{
-    font-size:1.2rem;
-  }
-  .section{
-    font-size:1rem;
-  }
-  .item{
-    font-size:1.2rem;
-    margin-top:18px;
-  }
-  .control-btn{
-    font-size:1rem;
-    margin-top:50px;
-  }
+  h1{ font-size:3rem; }
+  .subtitle{ font-size:1.2rem; }
+  .section{ font-size:1rem; }
+  .item{ font-size:1.2rem; margin-top:18px; }
+  .control-btn{ font-size:1rem; margin-top:50px; }
 }
 </style>
 </head>
@@ -133,7 +114,7 @@ h1{
 </div>
 
 <script>
-/* ===== FREEZE ===== */
+/* ===== 保存 ===== */
 function saveImage(){
   html2canvas(document.body).then(canvasImage=>{
     const link=document.createElement("a");
@@ -143,25 +124,26 @@ function saveImage(){
   });
 }
 
-/* ===== RESET ===== */
+/* ===== リセット ===== */
 function resetCanvas(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawCount=0;
   points=[];
 }
 
-/* ===== 背景アニメーション ===== */
+/* ===== canvas 初期化 ===== */
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 
 function resize(){
   canvas.width=window.innerWidth;
-  canvas.height=window.innerHeight;
+  canvas.height=document.body.scrollHeight; // ページ全体をカバー
 }
 resize();
 window.addEventListener("resize",resize);
 
-let mouse={x:canvas.width/2, y:canvas.height/2};
+/* ===== 描画データ ===== */
+let mouse={x:canvas.width/2,y:canvas.height/2};
 let pen={x:mouse.x, y:mouse.y};
 let lastPen={x:pen.x, y:pen.y};
 
@@ -173,55 +155,53 @@ let width=maxWidth;
 let points=[];
 let drawCount=0;
 const maxDraw=450;
-const maxPoints=10;
 
 /* ===== 補間関数 ===== */
-function interpolatePoints(p0, p1, segments){
-  const arr = [];
+function interpolatePoints(p0,p1,segments){
+  const arr=[];
   for(let i=0;i<segments;i++){
     const t=i/segments;
-    arr.push({
-      x: p0.x + (p1.x - p0.x) * t,
-      y: p0.y + (p1.y - p0.y) * t
-    });
+    arr.push({x:p0.x+(p1.x-p0.x)*t, y:p0.y+(p1.y-p0.y)*t});
   }
   return arr;
 }
 
-/* ===== PC/スマホタッチ制御 ===== */
+/* ===== 描画制御 ===== */
 let isDrawing=false;
 
+/* マウス */
 window.addEventListener("mousemove", e=>{
   mouse.x=e.clientX;
-  mouse.y=e.clientY;
+  mouse.y=e.clientY + window.scrollY; // スクロール分補正
 });
 
+/* タッチ */
 window.addEventListener("touchstart", e=>{
-  if(e.touches.length === 1){
+  if(e.touches.length===1){
     isDrawing=true;
     mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY;
-    // タッチ開始時に墨を出す
-    pen.x = mouse.x;
-    pen.y = mouse.y;
-    lastPen.x = mouse.x;
-    lastPen.y = mouse.y;
+    mouse.y=e.touches[0].clientY + window.scrollY;
+    pen.x=mouse.x;
+    pen.y=mouse.y;
+    lastPen.x=mouse.x;
+    lastPen.y=mouse.y;
   }
 });
 
 window.addEventListener("touchmove", e=>{
-  if(e.touches.length === 1 && isDrawing){
+  if(e.touches.length===1 && isDrawing){
     mouse.x=e.touches[0].clientX;
-    mouse.y=e.touches[0].clientY;
+    mouse.y=e.touches[0].clientY + window.scrollY;
   }
 });
 
 window.addEventListener("touchend", e=>{
-  if(e.touches.length === 0) isDrawing=false;
+  if(e.touches.length===0) isDrawing=false;
 });
 
-/* ===== 描画 ===== */
+/* ===== 描画ループ ===== */
 function draw(){
+  // pen追従
   pen.x += (mouse.x - pen.x) * ease;
   pen.y += (mouse.y - pen.y) * ease;
 
@@ -229,33 +209,34 @@ function draw(){
   const dy = pen.y - lastPen.y;
   const speed = Math.sqrt(dx*dx + dy*dy);
 
-  let targetWidth = maxWidth - Math.pow(speed*1.3,0.85);
+  // 太さは速度に応じて
+  let targetWidth=maxWidth-Math.pow(speed*1.3,0.85);
   if(targetWidth<minWidth) targetWidth=minWidth;
-  width += (targetWidth - width) * 0.2;
+  width += (targetWidth - width)*0.2;
 
-  points.push({x:pen.x, y:pen.y, w:width});
-  if(points.length>maxPoints) points.shift();
+  points.push({x:pen.x,y:pen.y,w:width});
+  if(points.length>10) points.shift();
 
   if(points.length>=2){
     for(let i=0;i<points.length-1;i++){
-      const p0 = points[i];
-      const p1 = points[i+1];
+      const p0=points[i];
+      const p1=points[i+1];
 
-      // 補間で滑らか化
-      const interp = interpolatePoints(p0,p1,3);
+      const interp=interpolatePoints(p0,p1,3);
       interp.forEach((pt,idx)=>{
         const next = interp[idx+1] || p1;
         ctx.beginPath();
         ctx.moveTo(pt.x,pt.y);
         ctx.lineTo(next.x,next.y);
 
-        const w = p0.w*(1 - i/points.length*0.6);
-        ctx.lineWidth = w;
+        // 墨感・筆圧
+        const w = p0.w*(1-i/points.length*0.6);
+        ctx.lineWidth=w;
 
-        const shade = Math.floor(Math.random()*6);
-        ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
+        const shade = Math.floor(Math.random()*20); // 墨っぽさ
+        ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
 
-        ctx.lineCap = "round";
+        ctx.lineCap="round";
         ctx.stroke();
 
         drawCount++;
@@ -268,8 +249,8 @@ function draw(){
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
-  lastPen.x = pen.x;
-  lastPen.y = pen.y;
+  lastPen.x=pen.x;
+  lastPen.y=pen.y;
 
   requestAnimationFrame(draw);
 }
@@ -279,6 +260,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
