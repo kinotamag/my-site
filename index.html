@@ -22,7 +22,7 @@ body{
 
 *{
   -webkit-user-drag:none;
-  touch-action:none;
+  touch-action:none; /* 1本指描画、2本指スクロールはJSで処理 */
 }
 
 canvas{
@@ -87,10 +87,10 @@ h1{
   opacity:0.6;
 }
 
-/* ===== スマホ対応 ===== */
+/* ===== スマホ用 ===== */
 @media (max-width: 768px){
   .content{
-    padding-top:15vh; /* タイトル下余白増 */
+    padding-top:12vh; /* タイトル少し上 */
     padding-left:5vw;
   }
   h1{
@@ -136,6 +136,7 @@ h1{
 <script>
 /* ===== FREEZE ===== */
 function saveImage(){
+  // body全体をキャプチャ
   html2canvas(document.body).then(canvasImage=>{
     const link=document.createElement("a");
     link.download="trail.png";
@@ -174,77 +175,105 @@ let points=[];
 let drawCount=0;
 const maxDraw=450;
 
-/* ===== PC ===== */
+/* ===== ポイント補間で滑らか化 ===== */
+function interpolatePoints(p0, p1, segments){
+  const arr = [];
+  for(let i=0;i<segments;i++){
+    const t=i/segments;
+    arr.push({
+      x: p0.x + (p1.x - p0.x) * t,
+      y: p0.y + (p1.y - p0.y) * t
+    });
+  }
+  return arr;
+}
+
+/* ===== PC & スマホ 1本指 ===== */
+let isTouching = false;
+
 window.addEventListener("mousemove", e=>{
   mouse.x=e.clientX;
   mouse.y=e.clientY;
 });
 
-/* ===== スマホ ===== */
 window.addEventListener("touchstart", e=>{
-  mouse.x=e.touches[0].clientX;
-  mouse.y=e.touches[0].clientY;
-});
-window.addEventListener("touchmove", e=>{
-  mouse.x=e.touches[0].clientX;
-  mouse.y=e.touches[0].clientY;
+  if(e.touches.length === 1){
+    isTouching = true;
+    mouse.x=e.touches[0].clientX;
+    mouse.y=e.touches[0].clientY;
+  }
 });
 
-/* ===== 軽量化 ===== */
-const maxPoints=10;  // ポイント数減らしてスマホ軽量化
+window.addEventListener("touchmove", e=>{
+  if(e.touches.length === 1 && isTouching){
+    mouse.x=e.touches[0].clientX;
+    mouse.y=e.touches[0].clientY;
+  }
+});
+
+window.addEventListener("touchend", e=>{
+  if(e.touches.length === 0) isTouching=false;
+});
+
+/* ===== 描画 ===== */
+const maxPoints=10;
 
 function draw(){
-  pen.x+=(mouse.x-pen.x)*ease;
-  pen.y+=(mouse.y-pen.y)*ease;
+  pen.x += (mouse.x - pen.x) * ease;
+  pen.y += (mouse.y - pen.y) * ease;
 
-  const dx=pen.x-lastPen.x;
-  const dy=pen.y-lastPen.y;
-  const speed=Math.sqrt(dx*dx+dy*dy);
+  const dx=pen.x - lastPen.x;
+  const dy=pen.y - lastPen.y;
+  const speed=Math.sqrt(dx*dx + dy*dy);
 
-  let targetWidth=maxWidth-Math.pow(speed*1.3,0.85);
-  if(targetWidth<minWidth) targetWidth=minWidth;
-  width+=(targetWidth-width)*0.2;
+  let targetWidth = maxWidth - Math.pow(speed*1.3,0.85);
+  if(targetWidth<minWidth) targetWidth = minWidth;
+  width += (targetWidth - width) * 0.2;
 
   points.push({x:pen.x, y:pen.y, w:width});
   if(points.length>maxPoints) points.shift();
 
   if(points.length>=2){
     for(let i=0;i<points.length-1;i++){
+      const p0=points[i];
       const p1=points[i+1];
+      // 補間して滑らか化
+      const interp = interpolatePoints(p0,p1,3);
+      interp.forEach((pt,idx)=>{
+        ctx.beginPath();
+        const next = interp[idx+1] || p1;
+        ctx.moveTo(pt.x,pt.y);
+        ctx.lineTo(next.x,next.y);
 
-      ctx.beginPath();
-      ctx.moveTo(points[i].x,points[i].y);
-      ctx.lineTo(p1.x,p1.y);
+        const w = p0.w*(1-i/points.length*0.6);
+        ctx.lineWidth = w;
 
-      const w=p1.w*(1-i/points.length*0.6);
-      ctx.lineWidth=w;
+        const shade = Math.floor(Math.random()*6);
+        ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
 
-      const shade=Math.floor(Math.random()*6); // 軽め
-      ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
-
-      ctx.lineCap="round";
-      ctx.stroke();
-
-      drawCount++;
+        ctx.lineCap="round";
+        ctx.stroke();
+        drawCount++;
+      });
     }
   }
 
-  // 蓄積量に応じて徐々に薄く
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
-  lastPen.x=pen.x;
-  lastPen.y=pen.y;
+  lastPen.x = pen.x;
+  lastPen.y = pen.y;
 
   requestAnimationFrame(draw);
 }
 
 draw();
-window.addEventListener("resize", resize);
+window.addEventListener("resize",resize);
 </script>
 
 </body>
 </html>
+
 
