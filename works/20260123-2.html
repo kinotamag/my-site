@@ -23,7 +23,8 @@ canvas{display:block}
   border: none;
   cursor: pointer;
   color: #fff;
-  z-index: 1;
+  z-index: 2;
+  touch-action: manipulation;
 }
 .control-btn:hover {
   opacity: 0.6;
@@ -65,8 +66,8 @@ const FLOOR_Y = () => canvas.height - 40;
 let bpm = 100;
 const BPM_MIN = 0;
 const BPM_MAX = 200;
-
 const knob = { x:()=>canvas.width-60, y:()=>canvas.height/2, r:20, dragging:false };
+
 function bpmFactor(){ return bpm / 100; }
 
 const bodies = [];
@@ -175,23 +176,46 @@ function drawBPMKnob(){
   ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
 }
 
-// ===== マウス操作 =====
+// ===== マウス & タッチ操作 =====
+function startDrag(x,y){
+  const kx=knob.x(), ky=knob.y();
+  if(Math.hypot(x-kx,y-ky)<knob.r+10) knob.dragging=true;
+}
+
+function moveDrag(y){
+  if(!knob.dragging)return;
+  const minY=knob.r+100, maxY=canvas.height-knob.r-100;
+  y=Math.max(minY,Math.min(maxY,y));
+  bpm=Math.round(BPM_MAX-((y-(knob.y()-100))/200)*(BPM_MAX-BPM_MIN));
+}
+
 canvas.addEventListener("mousedown",e=>{
   const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left,my=e.clientY-r.top;
-  const x=knob.x(),y=knob.y();
-  if(Math.hypot(mx-x,my-y)<knob.r+10) knob.dragging=true;
+  startDrag(e.clientX-r.left, e.clientY-r.top);
 });
-addEventListener("mouseup",()=>knob.dragging=false);
-addEventListener("mousemove",e=>{
-  if(!knob.dragging)return;
-  const r=canvas.getBoundingClientRect();
-  let my=e.clientY-r.top;
-  const minY=knob.r+100, maxY=canvas.height-knob.r-100;
-  my=Math.max(minY,Math.min(maxY,my));
-  bpm=Math.round(BPM_MAX-((my-(knob.y()-100))/200)*(BPM_MAX-BPM_MIN));
-});
+canvas.addEventListener("touchstart",e=>{
+  if(e.touches.length===1){
+    const r=canvas.getBoundingClientRect();
+    startDrag(e.touches[0].clientX-r.left, e.touches[0].clientY-r.top);
+  }
+}, {passive:false});
 
+addEventListener("mousemove",e=>{
+  const r=canvas.getBoundingClientRect();
+  moveDrag(e.clientY-r.top);
+});
+addEventListener("touchmove",e=>{
+  if(e.touches.length===1){
+    e.preventDefault();
+    const r=canvas.getBoundingClientRect();
+    moveDrag(e.touches[0].clientY-r.top);
+  }
+}, {passive:false});
+
+addEventListener("mouseup",()=>knob.dragging=false);
+addEventListener("touchend",()=>knob.dragging=false);
+
+// ===== 生成 =====
 setInterval(()=>{ if(bodies.length<140) bodies.push(new Body()); }, rand(160,360));
 
 function drawWalls(){ ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2;
@@ -215,3 +239,4 @@ loop();
 </script>
 </body>
 </html>
+
