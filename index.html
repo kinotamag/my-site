@@ -1,209 +1,184 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRACE</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
-body{
-  margin:0;
-  background:white;
-  font-family:'Inter',sans-serif;
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  font-family: 'Inter', sans-serif;
+  color: #000;
 }
 
-/* 背景 */
-canvas{
-  position:fixed;
-  top:0;
-  left:0;
-  z-index:0;
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
-/* テキスト */
-.content{
-  position:relative;
-  z-index:1;
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-start;
-  padding-left:10vw;
-  padding-top:9vh;
-  color:#111;
+.ui {
+  position: fixed;
+  top: 40px; /* 少し上へ */
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
 }
 
-h1{
-  font-size:2.4rem;
-  font-weight:400;
-  letter-spacing:0.12em;
-  margin:0;
+h1 {
+  margin: 0;
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: 0.08em;
 }
 
-.subtitle{
-  margin-top:10px;
-  font-weight:400;
-  letter-spacing:0.15em;
-  font-size:0.9rem;
+p {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.6;
 }
 
-.section{
-  margin-top:60px;
-  font-size:0.75rem;
-  letter-spacing:0.2em;
+.controls {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
 }
 
-.item{
-  margin-top:14px;
-  font-size:1rem;
-  letter-spacing:0.08em;
-  text-decoration:none;
-  color:#111;
+button {
+  background: none;
+  border: 1px solid #000;
+  padding: 6px 14px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
 }
 
-.control-btn{
-  margin-top:40px;
-  font-size:0.75rem;
-  letter-spacing:0.2em;
-  background:none;
-  border:none;
-  cursor:pointer;
-  color:#111;
-  margin-right:20px;
-}
-
-.control-btn:hover{
-  opacity:0.6;
+button:hover {
+  background: #000;
+  color: #fff;
 }
 </style>
 </head>
+
 <body>
 
 <canvas id="canvas"></canvas>
 
-<div class="content">
-  <h1>KINOTAMAG</h1>
-  <div class="subtitle">composer / visual</div>
+<div class="ui">
+  <h1>TRACE</h1>
+  <p>Move freely. Accumulation defines form.</p>
+</div>
 
-  <div class="section">WORKS</div>
-  <a href="#" class="item">01</a>
-  <a href="#" class="item">02</a>
-
-  <div class="section">CONTACT</div>
-
-  <div>
-    <button class="control-btn" onclick="saveImage()">FREEZE</button>
-    <button class="control-btn" onclick="resetCanvas()">RESET</button>
-  </div>
+<div class="controls">
+  <button id="freezeBtn">FREEZE</button>
+  <button id="resetBtn">RESET</button>
 </div>
 
 <script>
-/* ===== FREEZE（画面全体保存） ===== */
-function saveImage(){
-  html2canvas(document.body).then(canvasImage=>{
-    const link=document.createElement("a");
-    link.download="trace.png";
-    link.href=canvasImage.toDataURL();
-    link.click();
-  });
-}
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-/* ===== RESET ===== */
-function resetCanvas(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawCount=0;
-}
+let width, height;
+let points = [];
+const maxPoints = 1200; // 蓄積上限（増やすと長く残る）
 
-/* ===== 背景アニメーション ===== */
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
-
-function resize(){
-  canvas.width=innerWidth;
-  canvas.height=innerHeight;
+function resize() {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
 }
 resize();
+window.addEventListener("resize", resize);
 
-let mouse={x:canvas.width/2,y:canvas.height/2};
-let pen={x:mouse.x,y:mouse.y};
-let lastPen={x:pen.x,y:pen.y};
+let drawing = false;
 
-const ease=0.22;
-const maxWidth=25;
-const minWidth=0.5;
-let width=maxWidth;
+window.addEventListener("mousedown", () => drawing = true);
+window.addEventListener("mouseup", () => drawing = false);
 
-let points=[];
-let drawCount=0;
-const maxDraw=450;   // 蓄積量上限（ここ調整可）
+window.addEventListener("mousemove", (e) => {
+  if (!drawing) return;
 
-window.addEventListener("mousemove",e=>{
-  mouse.x=e.clientX;
-  mouse.y=e.clientY;
+  points.push({ x: e.clientX, y: e.clientY });
+
+  if (points.length > maxPoints) {
+    points.shift();
+  }
 });
 
-function noise(val){
-  return (Math.random()-0.5)*val;
-}
+function draw() {
+  ctx.clearRect(0, 0, width, height);
 
-function draw(){
+  if (points.length > 1) {
+    ctx.beginPath();
 
-  pen.x+=(mouse.x-pen.x)*ease;
-  pen.y+=(mouse.y-pen.y)*ease;
+    const fadeStart = maxPoints * 0.6; // 60%までは濃く保つ
 
-  const dx=pen.x-lastPen.x;
-  const dy=pen.y-lastPen.y;
-  const speed=Math.sqrt(dx*dx+dy*dy);
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
 
-  let targetWidth=maxWidth-Math.pow(speed*1.3,0.85);
-  if(targetWidth<minWidth) targetWidth=minWidth;
-  width+=(targetWidth-width)*0.2;
+      if (i === 0) {
+        ctx.moveTo(p.x, p.y);
+      } else {
+        let alpha = 0.9;
 
-  points.push({x:pen.x,y:pen.y,w:width});
-  if(points.length>20) points.shift();
+        if (i > fadeStart) {
+          const t = (i - fadeStart) / (maxPoints - fadeStart);
+          alpha = 0.9 - t * 0.7; // 徐々に薄く
+        }
 
-  if(points.length>=4){
-    for(let i=0;i<points.length-3;i++){
-      const p1=points[i+1];
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = "#000";
 
-      ctx.beginPath();
-      ctx.moveTo(points[i].x,points[i].y);
-      ctx.lineTo(p1.x,p1.y);
-
-      const w=p1.w*(1-i/points.length*0.6);
-      ctx.lineWidth=w;
-
-      const shade=Math.floor(Math.random()*20);
-      ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
-
-      ctx.lineCap="round";
-      ctx.stroke();
-
-      drawCount++;
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      }
     }
   }
-
-  // ★ 蓄積量に応じて浄化開始
-  if(drawCount>maxDraw){
-    ctx.fillStyle="rgba(255,255,255,0.025)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-  }
-
-  lastPen.x=pen.x;
-  lastPen.y=pen.y;
 
   requestAnimationFrame(draw);
 }
 
 draw();
 
-window.addEventListener("resize",resize);
+// RESET
+document.getElementById("resetBtn").addEventListener("click", () => {
+  points = [];
+  ctx.clearRect(0, 0, width, height);
+});
+
+// FREEZE（UI含めて保存）
+document.getElementById("freezeBtn").addEventListener("click", () => {
+  html2canvas(document.body).then(canvas => {
+    const link = document.createElement("a");
+    link.download = "trace.png";
+    link.href = canvas.toDataURL();
+    link.click();
+  });
+});
+
+// html2canvas CDN
+const script = document.createElement("script");
+script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+document.body.appendChild(script);
+
 </script>
 
 </body>
 </html>
+
 
 
 
