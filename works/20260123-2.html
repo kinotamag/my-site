@@ -151,10 +151,10 @@ function collide(){
   }
 }
 
-// ノブ描画
+// ノブ描画（スマホ版は半透明白）
 function drawKnob(){
   const x=knob.x(), y=knob.y;
-  ctx.fillStyle="white";
+  ctx.fillStyle = isSP ? 'rgba(255,255,255,0.6)' : 'white';
   ctx.fillRect(x-knob.width/2, y-knob.height/2, knob.width, knob.height);
 }
 
@@ -200,15 +200,3 @@ loop();
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
