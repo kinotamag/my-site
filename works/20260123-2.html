@@ -17,16 +17,19 @@ canvas{display:block}
   position: fixed;
   top: 20px;
   left: 20px;
-  font-size: 0.9rem;
+  font-size: 1.3rem; /* PCでも大きく */
+  font-weight: 600;
   letter-spacing: 0.2em;
-  background: none;
-  border: none;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid #fff;
   cursor: pointer;
   color: #fff;
   z-index: 2;
   touch-action: manipulation;
-  padding: 6px 10px;
-  border-radius: 4px;
+  padding: 12px 20px;
+  border-radius: 6px;
+  min-width: 80px;
+  text-align: center;
 }
 .control-btn:hover {
   opacity: 0.6;
@@ -35,10 +38,12 @@ canvas{display:block}
 /* スマホ用拡大 */
 @media (max-width:768px){
   .control-btn {
-    font-size: 2rem;       /* 文字を大きく */
+    font-size: 2rem;  /* 大きく */
+    font-weight: 700;
     top: 15px;
     left: 15px;
-    padding: 16px 20px;    /* ボタン全体も大きく */
+    padding: 18px 28px;
+    min-width: 100px;
   }
 }
 </style>
@@ -67,21 +72,13 @@ const WALL_L = 40;
 const WALL_R = () => canvas.width - 80;
 const FLOOR_Y = () => canvas.height - 40;
 
-// デバイス判定
 const isSP = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 // ===== BPM =====
 let bpm = 100;
 const BPM_MIN = 0;
 const BPM_MAX = 200;
-
-// ノブの基本設定
-const knob = { 
-  x:()=>canvas.width-60, 
-  y:()=>canvas.height/2, 
-  r:isSP?50:30,  // スマホは大きめ、PCも少し大きく
-  dragging:false 
-};
+const knob = { x:()=>canvas.width-60, y:()=>canvas.height/2, r:isSP?40:20, dragging:false, hitR: isSP?60:40 };
 function bpmFactor(){ return bpm / 100; }
 
 const bodies = [];
@@ -175,42 +172,35 @@ function collide(){
   }
 }
 
-// ===== ノブ描画 =====
+// ===== ノブ描画 & 目盛りラベル =====
 function drawBPMKnob(){
   const x=knob.x(), y=knob.y();
-  
-  const lineLen = isSP ? 12 : 6;
-  const lineWidth = isSP ? 3 : 2;
-
   ctx.strokeStyle="rgba(255,255,255,0.25)";
-  ctx.lineWidth=lineWidth;
-
-  // 縦線
+  ctx.lineWidth=isSP?4:2;
   ctx.beginPath();
   ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
 
-  // 目盛り
+  ctx.fillStyle="#fff";
+  ctx.font = isSP?"20px Inter":"14px Inter";
+  ctx.textAlign="right";
+  ctx.textBaseline="middle";
+
   for(let v=0;v<=BPM_MAX;v+=20){
     const t=v/BPM_MAX, my=y+100-t*200;
     ctx.beginPath();
-    ctx.moveTo(x-lineLen,my);
-    ctx.lineTo(x+lineLen,my);
-    ctx.stroke();
+    ctx.moveTo(x-15,my); ctx.lineTo(x+15,my); ctx.stroke();
+    ctx.fillText(v,x-20,my); // 文字ラベル
   }
 
-  // ノブ本体
   const t=bpm/BPM_MAX, ky=y+100-t*200;
-  ctx.fillStyle="white";
-  ctx.beginPath();
-  ctx.arc(x,ky,isSP?30:20,0,Math.PI*2); // スマホは30px、PCは20px
-  ctx.fill();
+  ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
 }
 
-// ===== ドラッグ判定 =====
+// ===== マウス & タッチ操作（常に掴める判定） =====
 function startDrag(x,y){
   const kx=knob.x(), ky=knob.y();
-  const touchRadius = isSP ? 50 : 35; // PCも広めに、スマホはさらに広く
-  if(Math.hypot(x-kx,y-ky) < touchRadius) knob.dragging=true;
+  // 判定を広くする（hitR）
+  if(Math.hypot(x-kx,y-ky)<=knob.hitR) knob.dragging=true;
 }
 function moveDrag(y){
   if(!knob.dragging)return;
@@ -269,4 +259,5 @@ loop();
 </script>
 </body>
 </html>
+
 
