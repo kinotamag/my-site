@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -37,8 +36,9 @@ canvas{
   justify-content:flex-start;
   padding-left:10vw;
   padding-top:9vh;
-  color:#111;
+  padding-bottom:20px;
   box-sizing:border-box;
+  color:#111;
 }
 h1{
   font-size:2.4rem;
@@ -108,6 +108,7 @@ h1{
 <script>
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
+
 function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
 resize();
 window.addEventListener("resize", resize);
@@ -129,14 +130,14 @@ let drawCount=0;
 const maxDraw=450;
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-const mobileSettings = { ease:0.25, maxWidth:18, minWidth:2, maxPoints:5, fadeAlpha:0.02 };
-const pcSettings = { ease:0.22, maxWidth:25, minWidth:0.5, maxPoints:10, fadeAlpha:0.008 };
+const mobileSettings = { maxWidth:22, minWidth:2, maxPoints:6, fadeAlpha:0.02 };
+const pcSettings = { maxWidth:25, minWidth:0.5, maxPoints:10, fadeAlpha:0.008 };
 const settings = isMobile ? mobileSettings : pcSettings;
 
 // PC
 window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
 
-// スマホ：指の位置に墨が乗る
+// スマホ：指の位置に墨が自然に乗る
 window.addEventListener("touchstart", e=>{
   const t=e.touches[0];
   mouse.x=t.clientX;
@@ -162,18 +163,19 @@ function draw(){
   if(isMobile){
     pen.x = mouse.x;
     pen.y = mouse.y;
-  }else{
-    pen.x += (mouse.x - pen.x) * settings.ease;
-    pen.y += (mouse.y - pen.y) * settings.ease;
+  } else {
+    const ease = 0.22;
+    pen.x += (mouse.x - pen.x) * ease;
+    pen.y += (mouse.y - pen.y) * ease;
   }
 
   const dx=pen.x-lastPen.x;
   const dy=pen.y-lastPen.y;
   const speed=Math.sqrt(dx*dx+dy*dy);
-  let targetWidth = settings.maxWidth - Math.pow(speed*1.3,0.85);
+  let targetWidth = settings.maxWidth - Math.pow(speed*1.2,0.9);
   if(targetWidth<settings.minWidth) targetWidth=settings.minWidth;
   let width = points.length ? points[points.length-1].w : settings.maxWidth;
-  width += (targetWidth-width)*0.2;
+  width += (targetWidth-width)*0.25;
 
   points.push({x:pen.x, y:pen.y, w:width});
   if(points.length>settings.maxPoints) points.shift();
@@ -209,7 +211,7 @@ draw();
 </script>
 </body>
 </html>
-```
+
 
 
 
