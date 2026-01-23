@@ -4,10 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
 body {
   margin: 0;
   background: white;
+  font-family: 'Inter', sans-serif;
   overflow: hidden;
 
   -webkit-user-select: none;
@@ -26,12 +29,42 @@ canvas {
   position: fixed;
   top: 0;
   left: 0;
+  z-index: 0;
+}
+
+/* ボタン用スタイル */
+.control-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #111;
+  z-index: 1;
+}
+
+.control-btn:hover {
+  opacity: 0.6;
+}
+
+@media (max-width:768px){
+  .control-btn {
+    font-size: 1rem;
+    top: 15px;
+    left: 15px;
+  }
 }
 </style>
 </head>
 <body>
 
 <canvas id="canvas"></canvas>
+
+<!-- 戻るボタン -->
+<button class="control-btn" onclick="history.back()">戻る</button>
 
 <script>
 const canvas = document.getElementById("canvas");
@@ -147,3 +180,4 @@ draw();
 
 </body>
 </html>
+
