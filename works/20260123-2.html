@@ -1,7 +1,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Falling Bodies BPM Control Right-Center Knob</title>
+<title>Falling Bodies BPM Control Thick Knob</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
 html,body{
@@ -59,12 +59,12 @@ const FLOOR_Y=()=>canvas.height-40;
 let bpm=100;
 const BPM_MIN=0,BPM_MAX=200;
 
-// ノブ設定
+// ノブ設定（太い縦バー）
 const knob={
   x:()=>canvas.width-60,
   y:canvas.height/2,
-  r:isSP?30:20,       // 描画用半径
-  hitR:isSP?70:40,    // 判定用半径（大きくして掴みやすく）
+  width:isSP?40:20, // バーの太さ
+  height:200,       // バー全体の高さ
   dragging:false
 };
 function bpmFactor(){ return bpm/100; }
@@ -151,34 +151,28 @@ function collide(){
   }
 }
 
-// ノブ描画
+// ノブ描画（太いバー）
 function drawKnob(){
   const x=knob.x(), y=knob.y;
-  ctx.strokeStyle="rgba(255,255,255,0.25)";
-  ctx.lineWidth=isSP?4:2;
-  ctx.beginPath();
-  ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
-  const t=bpm/BPM_MAX, ky=y+100-t*200;
   ctx.fillStyle="white";
-  ctx.beginPath();
-  ctx.arc(x,ky,knob.r,0,Math.PI*2);
-  ctx.fill();
+  ctx.fillRect(x-knob.width/2,y-knob.height/2,knob.width,knob.height);
 }
 
 // ドラッグ処理
 function startDrag(x,y){
   const dx=x-knob.x(), dy=y-knob.y;
-  if(Math.hypot(dx,dy)<=knob.hitR) knob.dragging=true;
+  if(Math.abs(dx)<=knob.width/2 && Math.abs(dy)<=knob.height/2) knob.dragging=true;
 }
 function moveDrag(y){
   if(!knob.dragging) return;
-  const minY=knob.r+100, maxY=canvas.height-knob.r-100;
+  const minY=knob.height/2;
+  const maxY=canvas.height-knob.height/2;
   knob.y=Math.max(minY,Math.min(maxY,y));
-  bpm=Math.round(BPM_MAX-((knob.y-(canvas.height/2-100))/200)*(BPM_MAX-BPM_MIN));
+  bpm=Math.round(BPM_MAX-((knob.y-knob.height/2)/(canvas.height-knob.height)*(BPM_MAX-BPM_MIN)));
 }
 
 canvas.addEventListener("mousedown",e=>startDrag(e.clientX,e.clientY));
-canvas.addEventListener("touchstart",e=>{ if(e.touches.length===1){ startDrag(e.touches[0].clientX,e.touches[0].clientY); }},{passive:false});
+canvas.addEventListener("touchstart",e=>{ if(e.touches.length===1) startDrag(e.touches[0].clientX,e.touches[0].clientY);},{passive:false});
 addEventListener("mousemove",e=>moveDrag(e.clientY));
 addEventListener("touchmove",e=>{ if(e.touches.length===1){ e.preventDefault(); moveDrag(e.touches[0].clientY); }},{passive:false});
 addEventListener("mouseup",()=>knob.dragging=false);
@@ -203,6 +197,7 @@ loop();
 </script>
 </body>
 </html>
+
 
 
 
