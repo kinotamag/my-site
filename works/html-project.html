@@ -82,6 +82,22 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   <div class="section">ここにコンテンツを追加できます</div>
   <div class="section">画像・コード・動画など自由に配置可能</div>
 
+  <!-- 20260123① -->
+  <div class="section">
+    20260123①
+    <div class="button-container">
+      <a href="20260123-1.html" class="button-link"></a>
+    </div>
+  </div>
+
+  <!-- 20260123② -->
+  <div class="section">
+    20260123②
+    <div class="button-container">
+      <a href="20260123-2.html" class="button-link"></a>
+    </div>
+  </div>
+
   <!-- HOME / WORKSへ戻る -->
   <div class="button-container home-button-container">
     <a href="index.html" class="button-link"></a>
@@ -97,7 +113,7 @@ document.querySelectorAll('.button-link').forEach(btn => {
   });
 });
 
-// Canvas 追従筆跡（WORKSと同じ）
+// Canvas 追従筆跡
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 let isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -172,3 +188,4 @@ draw();
 </script>
 </body>
 </html>
+
