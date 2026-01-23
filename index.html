@@ -3,53 +3,57 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
 <style>
 body{
   margin:0;
   background:white;
   font-family:'Inter',sans-serif;
   overflow:hidden;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
   user-select:none;
 }
-
+*{
+  -webkit-user-drag:none;
+  touch-action:none;
+}
 canvas{
   position:fixed;
   top:0;
   left:0;
   z-index:0;
 }
-
 .content{
   position:relative;
   z-index:1;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
   padding-left:10vw;
   padding-top:9vh;
   color:#111;
 }
-
 h1{
   font-size:2.4rem;
   font-weight:500;
   letter-spacing:0.12em;
   margin:0;
 }
-
 .subtitle{
   margin-top:10px;
+  font-weight:400;
   letter-spacing:0.15em;
   font-size:0.9rem;
 }
-
 .section{
   margin-top:60px;
   font-size:0.75rem;
   letter-spacing:0.2em;
 }
-
 .item{
   margin-top:14px;
   font-size:1rem;
@@ -57,7 +61,6 @@ h1{
   text-decoration:none;
   color:#111;
 }
-
 .control-btn{
   margin-top:40px;
   font-size:0.75rem;
@@ -68,172 +71,123 @@ h1{
   color:#111;
   margin-right:20px;
 }
+.control-btn:hover{
+  opacity:0.6;
+}
+@media (max-width: 768px){
+  .content{
+    padding-top:15vh;
+    padding-left:5vw;
+  }
+  h1{ font-size:3rem; }
+  .subtitle{ font-size:1.2rem; }
+  .section{ font-size:1rem; }
+  .item{ font-size:1.2rem; margin-top:18px; }
+  .control-btn{ font-size:1rem; margin-top:50px; }
+}
 </style>
 </head>
 <body>
-
 <canvas id="canvas"></canvas>
-
 <div class="content">
-  <h1>kinotamag</h1>
-  <div class="subtitle">🥚🥚 🥚</div>
-
-  <div class="section">WORKS</div>
-  <a href="#" class="item">01</a>
-  <a href="#" class="item">02</a>
-
-  <div>
-    <button class="control-btn" onclick="freeze()">FREEZE</button>
-    <button class="control-btn" onclick="resetCanvas()">RESET</button>
-  </div>
+<h1>kinotamag</h1>
+<div class="subtitle">🥚🥚 🥚</div>
+<div class="section">WORKS</div>
+<a href="#" class="item">01</a>
+<a href="#" class="item">02</a>
+<div class="section">CONTACT</div>
+<div>
+  <button class="control-btn" onclick="saveImage()">FREEZE</button>
+  <button class="control-btn" onclick="resetCanvas()">RESET</button>
 </div>
-
+</div>
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+function resize(){ canvas.width=innerWidth; canvas.height=innerHeight; }
 resize();
 window.addEventListener("resize", resize);
 
-let mouse = {x:canvas.width/2, y:canvas.height/2};
-let pen   = {x:mouse.x, y:mouse.y};
-let last  = {x:pen.x, y:pen.y};
-
-const ease = 0.25;
-
-/* ===== 太さ復元 ===== */
-const maxWidth = 28;   // 最大少し強め
-const minWidth = 2.2;  // 最細を太く
-let width = maxWidth;
-
-let points = [];
-
-/* ===== PC ===== */
-window.addEventListener("mousemove", e=>{
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-});
-
-/* ===== スマホ（自然な墨乗り） ===== */
-let touching = false;
-
-window.addEventListener("touchstart", e=>{
-  touching = true;
-  const t = e.touches[0];
-
-  mouse.x = t.clientX;
-  mouse.y = t.clientY;
-
-  // 置いた瞬間に墨を自然に乗せる
-  pen.x = mouse.x;
-  pen.y = mouse.y;
-  last.x = pen.x;
-  last.y = pen.y;
-
-  points.push({x:pen.x, y:pen.y, w:maxWidth});
-});
-
-window.addEventListener("touchmove", e=>{
-  if(!touching) return;
-
-  const t = e.touches[0];
-  const newX = t.clientX;
-  const newY = t.clientY;
-
-  const dx = newX - mouse.x;
-  const dy = newY - mouse.y;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-
-  // 補間（カクカク防止）
-  const steps = Math.floor(dist / 4);
-
-  for(let i=0;i<steps;i++){
-    const ix = mouse.x + dx*(i/steps);
-    const iy = mouse.y + dy*(i/steps);
-    addPoint(ix, iy);
-  }
-
-  mouse.x = newX;
-  mouse.y = newY;
-});
-
-window.addEventListener("touchend", ()=>{
-  touching = false;
-  points = [];
-});
-
-/* ===== ポイント追加 ===== */
-function addPoint(x,y){
-  pen.x = x;
-  pen.y = y;
-  points.push({x:pen.x, y:pen.y, w:width});
-  if(points.length > 30) points.shift();
-}
-
-/* ===== 描画 ===== */
-function draw(){
-
-  pen.x += (mouse.x - pen.x) * ease;
-  pen.y += (mouse.y - pen.y) * ease;
-
-  const dx = pen.x - last.x;
-  const dy = pen.y - last.y;
-  const speed = Math.sqrt(dx*dx + dy*dy);
-
-  let targetWidth = maxWidth - Math.pow(speed*1.4,0.9);
-  if(targetWidth < minWidth) targetWidth = minWidth;
-  width += (targetWidth - width) * 0.3;
-
-  points.push({x:pen.x, y:pen.y, w:width});
-  if(points.length > 30) points.shift();
-
-  if(points.length >= 2){
-    for(let i=0;i<points.length-1;i++){
-      ctx.beginPath();
-      ctx.moveTo(points[i].x, points[i].y);
-      ctx.lineTo(points[i+1].x, points[i+1].y);
-
-      ctx.lineWidth = points[i].w;
-      ctx.lineCap = "round";
-      ctx.strokeStyle = "rgb(0,0,0)";
-      ctx.stroke();
-    }
-  }
-
-  last.x = pen.x;
-  last.y = pen.y;
-
-  requestAnimationFrame(draw);
-}
-draw();
-
-/* ===== FREEZE（正しく全画面） ===== */
-function freeze(){
-  html2canvas(document.documentElement,{
-    width: window.innerWidth,
-    height: window.innerHeight,
-    scrollX: 0,
-    scrollY: 0
-  }).then(c=>{
-    const link = document.createElement("a");
-    link.download = "trail.png";
-    link.href = c.toDataURL();
+function saveImage(){
+  html2canvas(document.body).then(canvasImage=>{
+    const link=document.createElement("a");
+    link.download="trail.png";
+    link.href=canvasImage.toDataURL();
     link.click();
   });
 }
 
+let mouse={x:canvas.width/2,y:canvas.height/2};
+let pen={x:mouse.x,y:mouse.y};
+let lastPen={x:pen.x,y:pen.y};
+let points=[];
+let drawCount=0;
+const maxDraw=450;
+
+// デバイス判定
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+const mobileSettings = { ease:0.25, maxWidth:20, minWidth:1, maxPoints:8, fadeAlpha:0.01 };
+const pcSettings = { ease:0.22, maxWidth:25, minWidth:0.5, maxPoints:10, fadeAlpha:0.008 };
+const settings = isMobile ? mobileSettings : pcSettings;
+
+window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+window.addEventListener("touchstart", e=>{ mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; });
+window.addEventListener("touchmove", e=>{ mouse.x=e.touches[0].clientX; mouse.y=e.touches[0].clientY; });
+
 function resetCanvas(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  points = [];
+  drawCount=0;
+  points=[];
 }
-</script>
 
+function draw(){
+  pen.x += (mouse.x - pen.x) * settings.ease;
+  pen.y += (mouse.y - pen.y) * settings.ease;
+
+  const dx=pen.x-lastPen.x;
+  const dy=pen.y-lastPen.y;
+  const speed=Math.sqrt(dx*dx+dy*dy);
+
+  let targetWidth = settings.maxWidth - Math.pow(speed*1.3,0.85);
+  if(targetWidth<settings.minWidth) targetWidth=settings.minWidth;
+  let width = points.length ? points[points.length-1].w : settings.maxWidth;
+  width += (targetWidth-width)*0.2;
+
+  points.push({x:pen.x, y:pen.y, w:width});
+  if(points.length>settings.maxPoints) points.shift();
+
+  if(points.length>=2){
+    for(let i=0;i<points.length-1;i++){
+      const p1=points[i+1];
+      ctx.beginPath();
+      ctx.moveTo(points[i].x, points[i].y);
+      ctx.lineTo(p1.x, p1.y);
+      const w = p1.w * (1 - i/points.length*0.6);
+      ctx.lineWidth = w;
+      const alpha = 0.3 + Math.random()*0.2;
+      ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
+      ctx.lineCap="round";
+      ctx.stroke();
+      drawCount++;
+    }
+  }
+
+  if(drawCount>maxDraw){
+    ctx.fillStyle = `rgba(255,255,255,${settings.fadeAlpha})`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  lastPen.x = pen.x;
+  lastPen.y = pen.y;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
 </body>
 </html>
+
 
 
 
