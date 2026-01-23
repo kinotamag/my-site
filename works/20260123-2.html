@@ -35,10 +35,10 @@ canvas{display:block}
 /* スマホ用拡大 */
 @media (max-width:768px){
   .control-btn {
-    font-size: 1.5rem;  /* 大きく */
+    font-size: 2rem;       /* 文字を大きく */
     top: 15px;
     left: 15px;
-    padding: 12px 16px; /* 少し大きめに */
+    padding: 16px 20px;    /* ボタン全体も大きく */
   }
 }
 </style>
@@ -74,7 +74,14 @@ const isSP = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 let bpm = 100;
 const BPM_MIN = 0;
 const BPM_MAX = 200;
-const knob = { x:()=>canvas.width-60, y:()=>canvas.height/2, r:isSP?40:20, dragging:false };
+
+// ノブの基本設定
+const knob = { 
+  x:()=>canvas.width-60, 
+  y:()=>canvas.height/2, 
+  r:isSP?50:30,  // スマホは大きめ、PCも少し大きく
+  dragging:false 
+};
 function bpmFactor(){ return bpm / 100; }
 
 const bodies = [];
@@ -172,14 +179,13 @@ function collide(){
 function drawBPMKnob(){
   const x=knob.x(), y=knob.y();
   
-  // スマホ用に目盛り長と線幅を大きく
   const lineLen = isSP ? 12 : 6;
   const lineWidth = isSP ? 3 : 2;
 
   ctx.strokeStyle="rgba(255,255,255,0.25)";
   ctx.lineWidth=lineWidth;
-  
-  // 縦の線
+
+  // 縦線
   ctx.beginPath();
   ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
 
@@ -192,18 +198,19 @@ function drawBPMKnob(){
     ctx.stroke();
   }
 
-  // ノブ
+  // ノブ本体
   const t=bpm/BPM_MAX, ky=y+100-t*200;
   ctx.fillStyle="white";
   ctx.beginPath();
-  ctx.arc(x,ky,knob.r/2,0,Math.PI*2);
+  ctx.arc(x,ky,isSP?30:20,0,Math.PI*2); // スマホは30px、PCは20px
   ctx.fill();
 }
 
-// ===== マウス & タッチ操作 =====
+// ===== ドラッグ判定 =====
 function startDrag(x,y){
   const kx=knob.x(), ky=knob.y();
-  if(Math.hypot(x-kx,y-ky)<knob.r+10) knob.dragging=true;
+  const touchRadius = isSP ? 50 : 35; // PCも広めに、スマホはさらに広く
+  if(Math.hypot(x-kx,y-ky) < touchRadius) knob.dragging=true;
 }
 function moveDrag(y){
   if(!knob.dragging)return;
@@ -262,3 +269,4 @@ loop();
 </script>
 </body>
 </html>
+
