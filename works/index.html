@@ -35,6 +35,7 @@ a { color:#111; text-decoration:none; }
   h1{ font-size:3rem; }
   .subtitle{ font-size:1.2rem; }
   .section{ font-size:1rem; }
+  .embed-wrapper { max-width:100%; }
 }
 </style>
 </head>
@@ -66,19 +67,10 @@ a { color:#111; text-decoration:none; }
 
   <!-- SoundCloud -->
   <div class="section">SoundCloud</div>
-  <!-- PC埋め込み -->
-  <div class="embed-wrapper pc-sc" style="height:300px;">
+  <div class="embed-wrapper sc-wrapper" style="height:300px;">
     <iframe 
       src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kinotamag&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" 
-      style="width:100%; height:100%;" scrolling="no" frameborder="no" allow="autoplay; clipboard-write" allowfullscreen>
-    </iframe>
-  </div>
-
-  <!-- スマホ埋め込み（スクロール可能） -->
-  <div class="embed-wrapper sp-sc" style="height:300px; overflow:auto; -webkit-overflow-scrolling:touch; pointer-events:none; margin-top:20px;">
-    <iframe 
-      src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/kinotamag&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" 
-      style="width:100%; height:100%;" scrolling="no" frameborder="no" allow="autoplay">
+      style="width:100%; height:100%;" scrolling="yes" frameborder="no" allow="autoplay">
     </iframe>
   </div>
   <p><a href="https://soundcloud.com/kinotamag" target="_blank">SoundCloud</a></p>
@@ -92,13 +84,9 @@ function checkDisplay() {
   if(window.innerWidth <= 768){
     document.querySelector('.pc-yt').style.display = 'none';
     document.querySelector('.sp-yt').style.display = 'block';
-    document.querySelector('.pc-sc')?.style.display = 'none';
-    document.querySelector('.sp-sc')?.style.display = 'block';
   } else {
     document.querySelector('.pc-yt').style.display = 'block';
     document.querySelector('.sp-yt').style.display = 'none';
-    document.querySelector('.pc-sc')?.style.display = 'block';
-    document.querySelector('.sp-sc')?.style.display = 'none';
   }
 }
 window.addEventListener('resize', checkDisplay);
@@ -143,6 +131,7 @@ function draw(){
   points.push({x:pen.x, y:pen.y, w:width});
   if(points.length > 50) points.shift();
 
+  // 少しずつ薄くして残像
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
@@ -179,6 +168,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
