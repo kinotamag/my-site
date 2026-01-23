@@ -26,6 +26,7 @@ canvas{
   top:0;
   left:0;
   z-index:0;
+  display:block;
 }
 .content{
   position:relative;
@@ -37,6 +38,7 @@ canvas{
   padding-left:10vw;
   padding-top:9vh;
   color:#111;
+  box-sizing:border-box;
 }
 h1{
   font-size:2.4rem;
@@ -77,8 +79,9 @@ h1{
 }
 @media (max-width: 768px){
   .content{
-    padding-top:15vh;
+    padding-top:12vh;
     padding-left:5vw;
+    padding-bottom:20px;
   }
   h1{ font-size:3rem; }
   .subtitle{ font-size:1.2rem; }
@@ -105,7 +108,7 @@ h1{
 <script>
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
-function resize(){ canvas.width=innerWidth; canvas.height=innerHeight; }
+function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
 resize();
 window.addEventListener("resize", resize);
 
@@ -126,14 +129,14 @@ let drawCount=0;
 const maxDraw=450;
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-const mobileSettings = { ease:0.3, maxWidth:20, minWidth:2, maxPoints:6, fadeAlpha:0.02 };
+const mobileSettings = { ease:0.25, maxWidth:18, minWidth:2, maxPoints:5, fadeAlpha:0.02 };
 const pcSettings = { ease:0.22, maxWidth:25, minWidth:0.5, maxPoints:10, fadeAlpha:0.008 };
 const settings = isMobile ? mobileSettings : pcSettings;
 
 // PC
 window.addEventListener("mousemove", e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
 
-// タッチ用に「指の位置がそのままペン位置」になる
+// スマホ：指の位置に墨が乗る
 window.addEventListener("touchstart", e=>{
   const t=e.touches[0];
   mouse.x=t.clientX;
@@ -156,7 +159,6 @@ function resetCanvas(){
 }
 
 function draw(){
-  // PCは追従、スマホはほぼ指の位置
   if(isMobile){
     pen.x = mouse.x;
     pen.y = mouse.y;
@@ -177,19 +179,20 @@ function draw(){
   if(points.length>settings.maxPoints) points.shift();
 
   if(points.length>=2){
-    for(let i=0;i<points.length-1;i++){
-      const p1=points[i+1];
-      ctx.beginPath();
-      ctx.moveTo(points[i].x, points[i].y);
-      ctx.lineTo(p1.x, p1.y);
-      const w = p1.w * (1 - i/points.length*0.6);
-      ctx.lineWidth = w;
-      const alpha = 0.3 + Math.random()*0.2;
-      ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
-      ctx.lineCap="round";
-      ctx.stroke();
-      drawCount++;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for(let i=1;i<points.length;i++){
+      const p=points[i];
+      ctx.lineTo(p.x, p.y);
     }
+    const avgWidth = points.reduce((sum,p)=>sum+p.w,0)/points.length;
+    ctx.lineWidth = avgWidth;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const alpha = 0.4 + Math.random()*0.1;
+    ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
+    ctx.stroke();
+    drawCount++;
   }
 
   if(drawCount>maxDraw){
@@ -207,6 +210,7 @@ draw();
 </body>
 </html>
 ```
+
 
 
 
