@@ -75,16 +75,16 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 <body>
 <canvas id="canvas"></canvas>
 <div class="content">
-  <h1>HTML Project</h1>
-  <div class="subtitle">WORKS → HTML 詳細ページ</div>
+  <h1>Memo</h1>
+  <div class="subtitle">仮組みページ</div>
 
-  <!-- サンプルセクション -->
-  <div class="section">ここにコンテンツを追加できます</div>
-  <div class="section">画像・コード・動画など自由に配置可能</div>
+  <!-- 仮コンテンツ -->
+  <div class="section">ここにメモや文章を追加できます</div>
+  <div class="section">画像や動画も配置可能です</div>
 
-  <!-- HOMEへ戻る -->
+  <!-- HOMEへ戻るボタン -->
   <div class="button-container home-button-container">
-    <a href="index.html" class="button-link"></a>
+    <a href="../index.html" class="button-link"></a>
   </div>
 </div>
 
@@ -97,7 +97,7 @@ document.querySelectorAll('.button-link').forEach(btn => {
   });
 });
 
-// Canvas 追従筆跡（WORKSと同じ）
+// Canvas 追従筆跡
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 let isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -172,3 +172,4 @@ draw();
 </script>
 </body>
 </html>
+
