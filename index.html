@@ -34,54 +34,20 @@ canvas {
   padding-top:9vh;
   color:#111;
 }
-h1 {
-  font-size:2.4rem;
-  font-weight:500;
-  letter-spacing:0.12em;
-  margin:0;
-}
-.subtitle {
-  margin-top:10px;
-  font-weight:400;
-  letter-spacing:0.15em;
-  font-size:0.9rem;
-}
-.section {
-  margin-top:60px;
-  font-size:0.75rem;
-  letter-spacing:0.2em;
-}
-.item {
-  margin-top:14px;
-  font-size:1rem;
-  letter-spacing:0.08em;
-  text-decoration:none;
-  color:#111;
-}
-.control-btn {
-  margin-top:40px;
-  font-size:0.75rem;
-  letter-spacing:0.2em;
-  background:none;
-  border:none;
-  cursor:pointer;
-  color:#111;
-  margin-right:20px;
-}
-.control-btn:hover {
-  opacity:0.6;
-}
+h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
+.subtitle { margin-top:10px; font-weight:400; letter-spacing:0.15em; font-size:0.9rem; }
+.section { margin-top:60px; font-size:0.75rem; letter-spacing:0.2em; }
+.item { margin-top:14px; font-size:1rem; letter-spacing:0.08em; text-decoration:none; color:#111; }
+.control-btn { margin-top:40px; font-size:0.75rem; letter-spacing:0.2em; background:none; border:none; cursor:pointer; color:#111; margin-right:20px; }
+.control-btn:hover { opacity:0.6; }
 /* ===== スマホ対応 ===== */
 @media (max-width: 768px){
-  .content {
-    padding-top:15vh;
-    padding-left:5vw;
-  }
-  h1 { font-size:3rem; }
-  .subtitle { font-size:1.2rem; }
-  .section { font-size:1rem; }
-  .item { font-size:1.2rem; margin-top:18px; }
-  .control-btn { font-size:1rem; margin-top:50px; }
+  .content { padding-top:15vh; padding-left:5vw; }
+  h1{ font-size:3rem; }
+  .subtitle{ font-size:1.2rem; }
+  .section{ font-size:1rem; }
+  .item{ font-size:1.2rem; margin-top:18px; }
+  .control-btn{ font-size:1rem; margin-top:50px; }
 }
 </style>
 </head>
@@ -122,10 +88,10 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 let isMobile = /Mobi|Android/i.test(navigator.userAgent);
-let maxWidth = isMobile ? 25 : 45; // PCは太く
+let maxWidth = isMobile ? 25 : 45;
 const minWidth = 0.5;
 const ease = 0.22;
-const maxPoints = isMobile ? 10 : 30; // PCは滑らか
+const maxPoints = isMobile ? 15 : 50; // PCは50ポイントで滑らか
 let width = maxWidth;
 let points = [];
 let drawCount = 0;
@@ -133,7 +99,7 @@ const maxDraw = 450;
 
 function resize() {
   canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight; // 画面いっぱい
+  canvas.height = window.innerHeight; // 上端から端まで描画
 }
 resize();
 
@@ -142,21 +108,22 @@ let mouse = { x: canvas.width/2, y: canvas.height/2 };
 let pen = { x: mouse.x, y: mouse.y };
 let lastPen = { x: pen.x, y: pen.y };
 
-window.addEventListener("mousemove", e=>{
+window.addEventListener("mousemove", e => {
   mouse.x = e.clientX;
   mouse.y = e.clientY;
 });
-window.addEventListener("touchstart", e=>{
+window.addEventListener("touchstart", e => {
   mouse.x = e.touches[0].clientX;
   mouse.y = e.touches[0].clientY;
 });
-window.addEventListener("touchmove", e=>{
+window.addEventListener("touchmove", e => {
   mouse.x = e.touches[0].clientX;
   mouse.y = e.touches[0].clientY;
 });
 
 /* ===== 描画 ===== */
 function draw() {
+  // イージング
   pen.x += (mouse.x - pen.x) * ease;
   pen.y += (mouse.y - pen.y) * ease;
 
@@ -173,20 +140,26 @@ function draw() {
 
   if(points.length >= 2){
     for(let i=0; i<points.length-1; i++){
+      const p0 = points[i];
       const p1 = points[i+1];
-      ctx.beginPath();
-      ctx.moveTo(points[i].x, points[i].y);
-      ctx.lineTo(p1.x, p1.y);
-      const w = p1.w * (0.85 + Math.random()*0.3); // 墨っぽい太さランダム
-      ctx.lineWidth = w;
-      const shade = Math.floor(Math.random()*20); // 墨感強化
-      ctx.strokeStyle = `rgb(${shade},${shade},${shade})`;
-      ctx.lineCap = "round";
-      ctx.stroke();
+      // 線を補間して滑らかに
+      const steps = Math.ceil(Math.sqrt((p1.x-p0.x)**2 + (p1.y-p0.y)**2)/2);
+      for(let s=0; s<steps; s++){
+        const t = s/steps;
+        const x = p0.x + (p1.x - p0.x)*t;
+        const y = p0.y + (p1.y - p0.y)*t;
+        const w = p0.w + (p1.w - p0.w)*t*(0.85+Math.random()*0.3);
+        ctx.beginPath();
+        ctx.arc(x, y, w/2, 0, Math.PI*2);
+        const shade = Math.floor(Math.random()*20);
+        ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+        ctx.fill();
+      }
       drawCount++;
     }
   }
 
+  // 徐々に薄く
   if(drawCount > maxDraw){
     ctx.fillStyle = "rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -202,6 +175,7 @@ window.addEventListener("resize", resize);
 </script>
 </body>
 </html>
+
 
 
 
