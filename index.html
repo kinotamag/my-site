@@ -15,7 +15,7 @@ body{
   -webkit-user-select:none;
   -moz-user-select:none;
   -ms-user-select:none;
-  overflow-y:hidden; /* デフォルトはスクロールなし */
+  overflow-y:hidden; /* PCはスクロールなし */
 }
 
 canvas{
@@ -89,6 +89,13 @@ h1{
   .section{ font-size:1rem; }
   .item{ font-size:1.2rem; margin-top:18px; }
   .control-btn{ font-size:1rem; margin-top:50px; }
+
+  /* スクロール領域を下に確保 */
+  body::after{
+    content:'';
+    display:block;
+    height:800px; /* 下にスクロールできる領域 */
+  }
 }
 </style>
 </head>
@@ -157,7 +164,7 @@ let width=maxWidth;
 
 let points=[];
 let drawCount=0;
-const maxDraw=450;
+const maxDraw=600; // 蓄積量の上限
 
 /* ===== 補間関数 ===== */
 function interpolatePoints(p0,p1,segments){
@@ -199,7 +206,6 @@ window.addEventListener("touchmove", e=>{
     mouse.y=e.touches[0].clientY + window.scrollY;
     e.preventDefault(); // 1本指描画時のみスクロール停止
   }
-  // 2本指以上は preventDefault しない → 自然にスクロール
 });
 
 window.addEventListener("touchend", e=>{
@@ -251,6 +257,7 @@ function draw(){
     }
   }
 
+  // 蓄積量に応じて少しずつ薄く
   if(drawCount>maxDraw){
     ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -267,6 +274,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
