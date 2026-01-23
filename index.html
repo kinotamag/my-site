@@ -56,8 +56,6 @@ function saveImage() {
   });
 }
 function resetCanvas() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawCount = 0;
   points = [];
 }
 
@@ -70,8 +68,6 @@ const ease = 0.22;
 const maxPoints = isMobile ? 15 : 50;
 let width = maxWidth;
 let points = [];
-let drawCount = 0;
-const maxDraw = 450;
 
 function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
@@ -94,42 +90,35 @@ function draw(){
   if(targetWidth < minWidth) targetWidth = minWidth;
   width += (targetWidth - width)*0.25;
 
-  points.push({x:pen.x,y:pen.y,w:width});
-  if(points.length>maxPoints) points.shift();
+  points.push({x:pen.x, y:pen.y, w:width});
+  if(points.length > maxPoints) points.shift(); // 古い点を少しずつ消す
 
-  if(points.length>=2){
-    for(let i=0;i<points.length-1;i++){
-      const p0 = points[i];
-      const p1 = points[i+1];
-      const steps = Math.ceil(Math.sqrt((p1.x-p0.x)**2+(p1.y-p0.y)**2)/2);
-      for(let s=0;s<steps;s++){
-        const t = s/steps;
-        const x = p0.x + (p1.x-p0.x)*t;
-        const y = p0.y + (p1.y-p0.y)*t;
-        let w = p0.w + (p1.w-p0.w)*t*(0.85+Math.random()*0.3);
+  // 画面クリアせずに描画
+  ctx.clearRect(0,0,canvas.width,canvas.height); // 毎フレーム全体をクリアして再描画（残像を作る）
+  for(let i=0;i<points.length-1;i++){
+    const p0 = points[i];
+    const p1 = points[i+1];
+    const steps = Math.ceil(Math.sqrt((p1.x-p0.x)**2 + (p1.y-p0.y)**2)/2);
+    for(let s=0;s<steps;s++){
+      const t = s/steps;
+      const x = p0.x + (p1.x-p0.x)*t;
+      const y = p0.y + (p1.y-p0.y)*t;
+      let w = p0.w + (p1.w-p0.w)*t*(0.85+Math.random()*0.3);
 
-        // 丸を4回重ねて墨感（黒寄り）
-        for(let k=0;k<4;k++){
-          const shade = Math.floor(Math.random()*15); // 黒寄り
-          ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
-          ctx.beginPath();
-          ctx.arc(
-            x + (Math.random()*0.5-0.25),
-            y + (Math.random()*0.5-0.25),
-            w/2,
-            0, Math.PI*2
-          );
-          ctx.fill();
-        }
+      // 黒寄りの墨感
+      for(let k=0;k<4;k++){
+        const shade = Math.floor(Math.random()*15);
+        ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+        ctx.beginPath();
+        ctx.arc(
+          x + (Math.random()*0.5-0.25),
+          y + (Math.random()*0.5-0.25),
+          w/2,
+          0, Math.PI*2
+        );
+        ctx.fill();
       }
-      drawCount++;
     }
-  }
-
-  // 薄くなる速度さらにUP
-  if(drawCount>maxDraw){
-    ctx.fillStyle="rgba(255,255,255,0.18)"; // 0.18でかなり早く薄くなる
-    ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
   lastPen.x = pen.x;
@@ -142,6 +131,7 @@ window.addEventListener("resize", resize);
 </script>
 </body>
 </html>
+
 
 
 
