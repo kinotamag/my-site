@@ -77,18 +77,16 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   .content { padding-left:5vw; padding-top:15vh; }
   h1 { font-size:3rem; }
 
-  /* ボタンは中央揃え（ただし戻るは上揃え） */
-  .button-container:not(.two-buttons) { align-items:center; }
-
-  .button-container.two-buttons { 
-    align-items:flex-start; 
-    gap:24px; 
+  /* すべてのボタンを①に揃える */
+  .button-container { 
+    align-items:flex-start;  /* 左揃えで①と同じ */
+    gap:16px;                /* ①と同じ */
   }
 
   /* 戻るボタン下余白を広げる */
   .section .button-container.last { margin-bottom:60px; }
 
-  .button-link { width:70%; max-width:250px; height:80px; }
+  .button-link { width:180px; height:60px; } /* ①と同じ */
 }
 </style>
 </head>
@@ -206,6 +204,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
