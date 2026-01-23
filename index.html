@@ -11,9 +11,6 @@ body {
   background:white;
   font-family:'Inter',sans-serif;
   overflow:hidden;
-  -webkit-user-select:none;
-  -moz-user-select:none;
-  -ms-user-select:none;
   user-select:none;
 }
 * {
@@ -124,42 +121,50 @@ function resetCanvas() {
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-function resize() {
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-resize();
-
-let mouse = { x: canvas.width/2, y: canvas.height/2 };
-let pen = { x: mouse.x, y: mouse.y };
-let lastPen = { x: pen.x, y: pen.y };
-const ease = 0.22;
-const maxWidth = 25;
+let isMobile = /Mobi|Android/i.test(navigator.userAgent);
+let maxWidth = isMobile ? 25 : 40; // PCはもっと太く
 const minWidth = 0.5;
+const ease = 0.22;
+const maxPoints = 10;
 let width = maxWidth;
 let points = [];
 let drawCount = 0;
 const maxDraw = 450;
-const maxPoints = 10; // 軽量化
 
-/* ===== PC ===== */
-window.addEventListener("mousemove", e => {
+// 描画制限（スマホ下が見切れないように）
+function getCanvasHeight() {
+  if(isMobile){
+    return window.innerHeight - 80; // 下余白確保
+  }
+  return window.innerHeight;
+}
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = getCanvasHeight();
+}
+resize();
+
+/* マウス/タッチ */
+let mouse = { x: canvas.width/2, y: canvas.height/2 };
+let pen = { x: mouse.x, y: mouse.y };
+let lastPen = { x: pen.x, y: pen.y };
+
+window.addEventListener("mousemove", e=>{
   mouse.x = e.clientX;
-  mouse.y = e.clientY;
+  mouse.y = Math.min(e.clientY, canvas.height); // 下は描けない
+});
+window.addEventListener("touchstart", e=>{
+  mouse.x = e.touches[0].clientX;
+  mouse.y = Math.min(e.touches[0].clientY, canvas.height);
+});
+window.addEventListener("touchmove", e=>{
+  mouse.x = e.touches[0].clientX;
+  mouse.y = Math.min(e.touches[0].clientY, canvas.height);
 });
 
-/* ===== スマホ ===== */
-window.addEventListener("touchstart", e => {
-  mouse.x = e.touches[0].clientX;
-  mouse.y = e.touches[0].clientY;
-});
-window.addEventListener("touchmove", e => {
-  mouse.x = e.touches[0].clientX;
-  mouse.y = e.touches[0].clientY;
-});
-
-/* ===== 描画 ===== */
 function draw() {
+  // イージング
   pen.x += (mouse.x - pen.x) * ease;
   pen.y += (mouse.y - pen.y) * ease;
 
@@ -174,9 +179,11 @@ function draw() {
   points.push({x: pen.x, y: pen.y, w: width});
   if(points.length > maxPoints) points.shift();
 
-  if(points.length >= 2) {
+  if(points.length >= 2){
     for(let i=0; i<points.length-1; i++){
       const p1 = points[i+1];
+      // 下端制限
+      if(p1.y > canvas.height) continue;
       ctx.beginPath();
       ctx.moveTo(points[i].x, points[i].y);
       ctx.lineTo(p1.x, p1.y);
@@ -206,6 +213,7 @@ window.addEventListener("resize", resize);
 </script>
 </body>
 </html>
+
 
 
 
