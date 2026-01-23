@@ -15,11 +15,7 @@ body{
   -webkit-user-select:none;
   -moz-user-select:none;
   -ms-user-select:none;
-  overflow-y:auto;
-}
-
-*{
-  touch-action:none; /* 1本指描画・2本指スクロールをJSで判定 */
+  overflow-y:hidden; /* デフォルトはスクロールなし */
 }
 
 canvas{
@@ -32,7 +28,7 @@ canvas{
 .content{
   position:relative;
   z-index:1;
-  min-height:200vh; /* 下までスクロール可能に */
+  min-height:100vh;
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
@@ -81,6 +77,9 @@ h1{
 
 /* スマホ用 */
 @media (max-width:768px){
+  body {
+    overflow-y:auto; /* スマホだけスクロール可能 */
+  }
   .content{
     padding-top:18vh;
     padding-left:5vw;
@@ -136,8 +135,12 @@ const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 
 function resize(){
-  canvas.width=window.innerWidth;
-  canvas.height=document.body.scrollHeight; // ページ全体をカバー
+  canvas.width = window.innerWidth;
+  if(window.innerWidth <= 768){
+    canvas.height = document.body.scrollHeight; // スマホはページ全体
+  } else {
+    canvas.height = window.innerHeight; // PCは1画面のみ
+  }
 }
 resize();
 window.addEventListener("resize",resize);
@@ -172,7 +175,7 @@ let isDrawing=false;
 /* マウス */
 window.addEventListener("mousemove", e=>{
   mouse.x=e.clientX;
-  mouse.y=e.clientY + window.scrollY; // スクロール分補正
+  mouse.y=e.clientY + window.scrollY; // スクロール補正
 });
 
 /* タッチ */
@@ -185,6 +188,8 @@ window.addEventListener("touchstart", e=>{
     pen.y=mouse.y;
     lastPen.x=mouse.x;
     lastPen.y=mouse.y;
+  } else {
+    isDrawing=false; // 2本指以上は描画せずスクロール可能
   }
 });
 
@@ -192,7 +197,9 @@ window.addEventListener("touchmove", e=>{
   if(e.touches.length===1 && isDrawing){
     mouse.x=e.touches[0].clientX;
     mouse.y=e.touches[0].clientY + window.scrollY;
+    e.preventDefault(); // 1本指描画時のみスクロール停止
   }
+  // 2本指以上は preventDefault しない → 自然にスクロール
 });
 
 window.addEventListener("touchend", e=>{
@@ -260,6 +267,7 @@ draw();
 
 </body>
 </html>
+
 
 
 
