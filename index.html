@@ -108,8 +108,9 @@ function draw(){
         const y = p0.y + (p1.y-p0.y)*t;
         let w = p0.w + (p1.w-p0.w)*t*(0.85+Math.random()*0.3);
 
-        for(let k=0;k<4;k++){ // 丸を4回重ねて墨感
-          const shade = Math.floor(Math.random()*20);
+        // 丸を4回重ねて墨感（黒寄り）
+        for(let k=0;k<4;k++){
+          const shade = Math.floor(Math.random()*15); // 黒寄り
           ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
           ctx.beginPath();
           ctx.arc(
@@ -125,9 +126,9 @@ function draw(){
     }
   }
 
-  // 薄くなる色を濃くしてフェード速度UP
+  // 薄くなる速度さらにUP
   if(drawCount>maxDraw){
-    ctx.fillStyle="rgba(0,0,0,0.1)"; // 墨感しっかり残す
+    ctx.fillStyle="rgba(255,255,255,0.18)"; // 0.18でかなり早く薄くなる
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
@@ -141,6 +142,7 @@ window.addEventListener("resize", resize);
 </script>
 </body>
 </html>
+
 
 
 
