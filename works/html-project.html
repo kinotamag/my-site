@@ -63,9 +63,10 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   background:#222;
 }
 
-/* 2段ボタン用調整 */
-.button-container.two-buttons {
+/* 20260123②のボタンと戻るボタン間 */
+.section .button-container.two-buttons {
   margin-top:16px;
+  gap:40px; /* PC版で間を広げる */
 }
 
 /* スマホ専用調整 */
@@ -75,14 +76,15 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   .subtitle { font-size:1.2rem; }
   .section { font-size:1rem; }
 
-  /* 左揃え→中央寄せ */
-  .button-container { align-items:center; }
-  
-  /* 戻るボタンを下に下げて余白確保 */
-  .section .button-container:last-child { 
-    margin-top:40px; 
-    margin-bottom:40px; 
-  }
+  /* ボタンは中央寄せ */
+  .button-container:not(.two-buttons) { align-items:center; }
+
+  /* 戻るテキストは上揃え */
+  .button-container.two-buttons { align-items:flex-start; gap:24px; }
+
+  /* 戻るボタン下余白を広げる */
+  .section .button-container.last { margin-bottom:60px; }
+
   .button-link { width:70%; max-width:250px; height:80px; }
 }
 </style>
@@ -97,7 +99,7 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 
   <!-- 20260123① -->
   <div class="section">
-    ・20260123①
+    20260123①
     <div class="button-container">
       <a href="20260123-1.html" class="button-link"></a>
     </div>
@@ -105,14 +107,14 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
 
   <!-- 20260123② -->
   <div class="section">
-    ・20260123②
-    <div class="button-container">
+    20260123②
+    <div class="button-container two-buttons">
       <a href="20260123-2.html" class="button-link"></a>
-    </div>
-    <!-- 戻る -->
-    <div class="button-container">
-      戻る
-      <a href="index.html" class="button-link"></a>
+      <!-- 戻る -->
+      <div class="button-container last">
+        戻る
+        <a href="index.html" class="button-link"></a>
+      </div>
     </div>
   </div>
 
@@ -202,6 +204,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
