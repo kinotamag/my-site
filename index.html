@@ -35,7 +35,7 @@ canvas{
 
 h1{
   font-size:2.4rem;
-  font-weight:500; /* 少しだけ強く */
+  font-weight:500;
   letter-spacing:0.12em;
   margin:0;
 }
@@ -167,8 +167,8 @@ function draw(){
       const w=p1.w*(1-i/points.length*0.6);
       ctx.lineWidth=w;
 
-      // ★ 少し濃く
-      const shade=Math.floor(Math.random()*12); // 20 → 12
+      // 濃さ強化（より締まる）
+      const shade=Math.floor(Math.random()*8);
       ctx.strokeStyle=`rgb(${shade},${shade},${shade})`;
 
       ctx.lineCap="round";
@@ -178,9 +178,9 @@ function draw(){
     }
   }
 
-  // ★ 浄化を弱く（残りやすく）
+  // 浄化かなり弱め（残像強化）
   if(drawCount>maxDraw){
-    ctx.fillStyle="rgba(255,255,255,0.015)"; // 0.025 → 0.015
+    ctx.fillStyle="rgba(255,255,255,0.008)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
@@ -197,6 +197,7 @@ window.addEventListener("resize",resize);
 
 </body>
 </html>
+
 
 
 
