@@ -1,0 +1,217 @@
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Falling Bodies BPM Control Right-Center Knob</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{
+  margin:0;
+  background:#06080f;
+  overflow:hidden;
+  font-family:'Inter',sans-serif;
+}
+canvas{display:block}
+
+/* 戻るボタン */
+.control-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  z-index: 1;
+}
+.control-btn:hover {
+  opacity: 0.6;
+}
+@media (max-width:768px){
+  .control-btn {
+    font-size: 1rem;
+    top: 15px;
+    left: 15px;
+  }
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- 戻るボタン -->
+<button class="control-btn" onclick="history.back()">戻る</button>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+addEventListener("resize", resize);
+resize();
+
+const rand = (a,b)=>Math.random()*(b-a)+a;
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+const WALL_L = 40;
+const WALL_R = () => canvas.width - 80;
+const FLOOR_Y = () => canvas.height - 40;
+
+// ===== BPM =====
+let bpm = 100;
+const BPM_MIN = 0;
+const BPM_MAX = 200;
+
+const knob = { x:()=>canvas.width-60, y:()=>canvas.height/2, r:20, dragging:false };
+function bpmFactor(){ return bpm / 100; }
+
+const bodies = [];
+
+function color(){ return `hsl(${rand(0,360)},${rand(55,100)}%,${rand(40,70)}%)`; }
+
+class Body{
+  constructor(){ this.reset(); }
+  reset(){
+    this.r = rand(14,52);
+    this.x = rand(WALL_L+this.r, WALL_R()-this.r);
+    this.y = rand(-canvas.height, -this.r*2);
+    const sizeFactor = this.r / 30;
+    const rareBoost = Math.random()<0.08 ? rand(1.8,2.6) : 1;
+    this.gravityBase = rand(0.08,0.16) * sizeFactor * rareBoost;
+    this.vx = rand(-1,1); this.vy = rand(0.1,0.6) * rareBoost;
+    this.wallRest = rand(0.4,0.85);
+    this.floorRest = rand(0.5,0.8);
+    this.friction = 0.92;
+    this.shape = pick(["circle","square","triangle","diamond","capsule","pentagon"]);
+    this.mode = pick(["fill","stroke"]);
+    this.col = color();
+    this.lineW = rand(1.2,3.6);
+    this.rot = rand(0,Math.PI*2);
+    this.vr = rand(-0.01,0.01);
+    this.scaleX = 1; this.scaleY = 1;
+  }
+  update(){
+    const f = bpmFactor();
+    this.vy += this.gravityBase * f;
+    this.x += this.vx * f; this.y += this.vy * f;
+    this.rot += this.vr * f;
+    if(this.x-this.r<WALL_L){ this.x=WALL_L+this.r; this.vx*=-this.wallRest; }
+    if(this.x+this.r>WALL_R()){ this.x=WALL_R()-this.r; this.vx*=-this.wallRest; }
+    if(this.y+this.r>FLOOR_Y()){
+      this.y=FLOOR_Y()-this.r;
+      this.vy*=-this.floorRest;
+      this.vx*=this.friction;
+      this.scaleY=0.6+0.4*(this.r/52);
+      this.scaleX=1.2-0.2*(this.r/52);
+    } else {
+      this.scaleX += (1-this.scaleX)*0.1;
+      this.scaleY += (1-this.scaleY)*0.1;
+    }
+    if(this.y-this.r>canvas.height) this.reset();
+  }
+  draw(){
+    ctx.save();
+    ctx.translate(this.x,this.y);
+    ctx.rotate(this.rot);
+    ctx.scale(this.scaleX,this.scaleY);
+    ctx.beginPath();
+    switch(this.shape){
+      case "circle": ctx.arc(0,0,this.r,0,Math.PI*2); break;
+      case "square": ctx.rect(-this.r,-this.r,this.r*2,this.r*2); break;
+      case "triangle":
+        ctx.moveTo(0,-this.r); ctx.lineTo(this.r,this.r); ctx.lineTo(-this.r,this.r); ctx.closePath(); break;
+      case "diamond":
+        ctx.moveTo(0,-this.r); ctx.lineTo(this.r,0); ctx.lineTo(0,this.r); ctx.lineTo(-this.r,0); ctx.closePath(); break;
+      case "capsule":{
+        const w=this.r*1.4,h=this.r*0.8;
+        ctx.moveTo(-w/2,-h/2); ctx.lineTo(w/2,-h/2); ctx.arc(w/2,0,h/2,-Math.PI/2,Math.PI/2);
+        ctx.lineTo(-w/2,h/2); ctx.arc(-w/2,0,h/2,Math.PI/2,-Math.PI/2); ctx.closePath();
+      } break;
+      case "pentagon":
+        for(let i=0;i<5;i++){ const a=Math.PI*2/5*i-Math.PI/2; const rr=this.r*rand(0.85,1);
+        const x=Math.cos(a)*rr,y=Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y); } ctx.closePath(); break;
+    }
+    if(this.mode==="fill"){ ctx.fillStyle=this.col; ctx.fill(); }
+    else{ ctx.strokeStyle=this.col; ctx.lineWidth=this.lineW; ctx.stroke(); }
+    ctx.restore();
+  }
+}
+
+function collide(){
+  for(let i=0;i<bodies.length;i++){
+    for(let j=i+1;j<bodies.length;j++){
+      const a=bodies[i], b=bodies[j];
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const d=Math.hypot(dx,dy);
+      const min=a.r+b.r;
+      if(d<min){
+        const o=(min-d)*0.5;
+        const ang=Math.atan2(dy,dx);
+        a.x-=Math.cos(ang)*o; a.y-=Math.sin(ang)*o;
+        b.x+=Math.cos(ang)*o; b.y+=Math.sin(ang)*o;
+        a.vx+=Math.cos(ang)*0.6*(1-a.r/52);
+        b.vx-=Math.cos(ang)*0.6*(1-b.r/52);
+      }
+    }
+  }
+}
+
+// ===== ノブ描画 =====
+function drawBPMKnob(){
+  const x=knob.x(), y=knob.y();
+  ctx.strokeStyle="rgba(255,255,255,0.25)";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
+  for(let v=0;v<=BPM_MAX;v+=20){
+    const t=v/BPM_MAX, my=y+100-t*200;
+    ctx.beginPath(); ctx.moveTo(x-6,my); ctx.lineTo(x+6,my); ctx.stroke();
+  }
+  const t=bpm/BPM_MAX, ky=y+100-t*200;
+  ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
+}
+
+// ===== マウス操作 =====
+canvas.addEventListener("mousedown",e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  const x=knob.x(),y=knob.y();
+  if(Math.hypot(mx-x,my-y)<knob.r+10) knob.dragging=true;
+});
+addEventListener("mouseup",()=>knob.dragging=false);
+addEventListener("mousemove",e=>{
+  if(!knob.dragging)return;
+  const r=canvas.getBoundingClientRect();
+  let my=e.clientY-r.top;
+  const minY=knob.r+100, maxY=canvas.height-knob.r-100;
+  my=Math.max(minY,Math.min(maxY,my));
+  bpm=Math.round(BPM_MAX-((my-(knob.y()-100))/200)*(BPM_MAX-BPM_MIN));
+});
+
+setInterval(()=>{ if(bodies.length<140) bodies.push(new Body()); }, rand(160,360));
+
+function drawWalls(){ ctx.strokeStyle="rgba(255,255,255,0.1)"; ctx.lineWidth=2;
+ctx.beginPath(); ctx.moveTo(WALL_L,0); ctx.lineTo(WALL_L,canvas.height);
+ctx.moveTo(WALL_R(),0); ctx.lineTo(WALL_R(),canvas.height); ctx.stroke(); }
+
+function drawFloor(){ ctx.strokeStyle="rgba(255,255,255,0.15)"; ctx.lineWidth=3;
+ctx.beginPath(); ctx.moveTo(0,FLOOR_Y()); ctx.lineTo(canvas.width,FLOOR_Y()); ctx.stroke(); }
+
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  bodies.forEach(b=>b.update());
+  collide();
+  bodies.forEach(b=>b.draw());
+  drawWalls();
+  drawFloor();
+  drawBPMKnob();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
