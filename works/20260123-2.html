@@ -59,13 +59,13 @@ const FLOOR_Y=()=>canvas.height-40;
 let bpm=100;
 const BPM_MIN=0,BPM_MAX=200;
 
-// ここは数値で初期化
+// ノブ設定
 const knob={
   x:()=>canvas.width-60,
   y:canvas.height/2,
-  r:isSP?30:20,
-  dragging:false,
-  hitR:isSP?60:30
+  r:isSP?30:20,       // 描画用半径
+  hitR:isSP?70:40,    // 判定用半径（大きくして掴みやすく）
+  dragging:false
 };
 function bpmFactor(){ return bpm/100; }
 
@@ -97,8 +97,7 @@ class Body{
   update(){
     const f=bpmFactor();
     this.vy+=this.gravityBase*f;
-    this.x+=this.vx*f;
-    this.y+=this.vy*f;
+    this.x+=this.vx*f; this.y+=this.vy*f;
     this.rot+=this.vr*f;
     if(this.x-this.r<WALL_L){ this.x=WALL_L+this.r; this.vx*=-this.wallRest; }
     if(this.x+this.r>WALL_R()){ this.x=WALL_R()-this.r; this.vx*=-this.wallRest; }
@@ -204,6 +203,7 @@ loop();
 </script>
 </body>
 </html>
+
 
 
 
