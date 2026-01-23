@@ -17,8 +17,7 @@ canvas{display:block}
   position: fixed;
   top: 20px;
   left: 20px;
-  font-size: 1.1rem; /* PCでも見やすく */
-  font-weight: 500;
+  font-size: 0.9rem;
   letter-spacing: 0.2em;
   background: none;
   border: none;
@@ -26,7 +25,7 @@ canvas{display:block}
   color: #fff;
   z-index: 2;
   touch-action: manipulation;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 4px;
 }
 .control-btn:hover {
@@ -36,11 +35,10 @@ canvas{display:block}
 /* スマホ用拡大 */
 @media (max-width:768px){
   .control-btn {
-    font-size: 1.6rem;  /* 大きく */
-    font-weight: 600;
+    font-size: 1.5rem;  /* 大きく */
     top: 15px;
     left: 15px;
-    padding: 12px 18px;
+    padding: 12px 16px; /* 少し大きめに */
   }
 }
 </style>
@@ -69,6 +67,7 @@ const WALL_L = 40;
 const WALL_R = () => canvas.width - 80;
 const FLOOR_Y = () => canvas.height - 40;
 
+// デバイス判定
 const isSP = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 // ===== BPM =====
@@ -169,29 +168,36 @@ function collide(){
   }
 }
 
-// ===== ノブ描画 & 目盛りラベル =====
+// ===== ノブ描画 =====
 function drawBPMKnob(){
   const x=knob.x(), y=knob.y();
+  
+  // スマホ用に目盛り長と線幅を大きく
+  const lineLen = isSP ? 12 : 6;
+  const lineWidth = isSP ? 3 : 2;
+
   ctx.strokeStyle="rgba(255,255,255,0.25)";
-  ctx.lineWidth=isSP?4:2;
+  ctx.lineWidth=lineWidth;
+  
+  // 縦の線
   ctx.beginPath();
   ctx.moveTo(x,y-100); ctx.lineTo(x,y+100); ctx.stroke();
 
-  ctx.fillStyle="#fff";
-  ctx.font = isSP?"18px Inter":"14px Inter";
-  ctx.textAlign="left";
-  ctx.textBaseline="middle";
-
+  // 目盛り
   for(let v=0;v<=BPM_MAX;v+=20){
     const t=v/BPM_MAX, my=y+100-t*200;
     ctx.beginPath();
-    ctx.moveTo(x-10,my); ctx.lineTo(x+10,my); ctx.stroke();
-    ctx.fillText(v,my+0); // 目盛りラベル
-    ctx.fillText(v,x+14,my); // 文字ラベル
+    ctx.moveTo(x-lineLen,my);
+    ctx.lineTo(x+lineLen,my);
+    ctx.stroke();
   }
 
+  // ノブ
   const t=bpm/BPM_MAX, ky=y+100-t*200;
-  ctx.fillStyle="white"; ctx.beginPath(); ctx.arc(x,ky,knob.r/2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="white";
+  ctx.beginPath();
+  ctx.arc(x,ky,knob.r/2,0,Math.PI*2);
+  ctx.fill();
 }
 
 // ===== マウス & タッチ操作 =====
@@ -256,7 +262,3 @@ loop();
 </script>
 </body>
 </html>
-
-
-
-
