@@ -17,7 +17,7 @@ canvas{display:block}
   position: fixed;
   top: 20px;
   left: 20px;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   letter-spacing: 0.2em;
   background: none;
   border: none;
@@ -25,15 +25,20 @@ canvas{display:block}
   color: #fff;
   z-index: 2;
   touch-action: manipulation;
+  padding: 6px 10px;
+  border-radius: 4px;
 }
 .control-btn:hover {
   opacity: 0.6;
 }
+
+/* スマホ用拡大 */
 @media (max-width:768px){
   .control-btn {
-    font-size: 1rem;
+    font-size: 1.3rem;
     top: 15px;
     left: 15px;
+    padding: 10px 14px;
   }
 }
 </style>
@@ -62,12 +67,14 @@ const WALL_L = 40;
 const WALL_R = () => canvas.width - 80;
 const FLOOR_Y = () => canvas.height - 40;
 
+// デバイス判定
+const isSP = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 // ===== BPM =====
 let bpm = 100;
 const BPM_MIN = 0;
 const BPM_MAX = 200;
-const knob = { x:()=>canvas.width-60, y:()=>canvas.height/2, r:20, dragging:false };
-
+const knob = { x:()=>canvas.width-60, y:()=>canvas.height/2, r:isSP?40:20, dragging:false };
 function bpmFactor(){ return bpm / 100; }
 
 const bodies = [];
@@ -181,7 +188,6 @@ function startDrag(x,y){
   const kx=knob.x(), ky=knob.y();
   if(Math.hypot(x-kx,y-ky)<knob.r+10) knob.dragging=true;
 }
-
 function moveDrag(y){
   if(!knob.dragging)return;
   const minY=knob.r+100, maxY=canvas.height-knob.r-100;
@@ -239,4 +245,5 @@ loop();
 </script>
 </body>
 </html>
+
 
