@@ -26,33 +26,37 @@ canvas {
   display:flex; flex-direction:column; justify-content:flex-start; 
   padding-left:10vw; padding-top:9vh; color:#111; 
 }
+
 h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
+
 .section { margin-top:60px; font-size:0.75rem; letter-spacing:0.2em; }
 
 .button-container {
   display:flex; flex-direction:column;
   gap:16px;
-  align-items:flex-start; /* PC版は左揃え */
+  align-items:flex-start;
   margin-top:8px;
 }
+
 .button-link {
   display:inline-flex;
   justify-content:center;
   align-items:center;
   padding:0;
-  height:60px;
-  width:180px;
+  height:60px;           
+  width:180px;           
   background:#111;
   color:#fff;
   text-decoration:none;
   font-weight:500;
   border-radius:8px;
   text-align:center;
-  cursor:pointer;
+  cursor:pointer;        
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
   font-size:1rem;
   position:relative;
 }
+
 .button-link::after {
   content:"Click";
   color:white;
@@ -60,33 +64,39 @@ h1 { font-size:2.4rem; font-weight:500; letter-spacing:0.12em; margin:0; }
   top:50%; left:50%;
   transform: translate(-50%, -50%);
 }
+
 .button-link:active {
-  transform: scale(0.95);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  background:#222;
+  transform: scale(0.95);            
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+  background:#222;                   
 }
 
 /* 20260123②のボタンと戻るボタン間 */
 .section .button-container.two-buttons {
   margin-top:16px;
-  gap:40px; /* PC版で間を広げる */
+  gap:40px; 
 }
 
-/* スマホ専用調整 */
-@media (max-width:768px){
-  .content { padding-left:5vw; padding-top:15vh; }
-  h1 { font-size:3rem; }
+/* 戻るボタン下余白 */
+.section .button-container.last { margin-bottom:60px; }
 
-  /* すべてのボタンを①に揃える */
+/* スマホ版統一 (WORKSに合わせる) */
+@media (max-width:768px){
+  .content { padding-top:15vh; padding-left:5vw; }
+  h1 { font-size:3rem; }
+  .section { font-size:1rem; }
+
+  /* すべてのボタンをWORKSと同じ */
   .button-container { 
-    align-items:flex-start;  /* 左揃えで①と同じ */
-    gap:16px;                /* ①と同じ */
+    align-items:flex-start;
+    gap:16px;
   }
 
-  /* 戻るボタン下余白を広げる */
-  .section .button-container.last { margin-bottom:60px; }
-
-  .button-link { width:180px; height:60px; } /* ①と同じ */
+  .button-link {
+    width:70%;
+    max-width:250px;
+    height:80px;
+  }
 }
 </style>
 </head>
@@ -204,6 +214,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
