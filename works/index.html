@@ -1,3 +1,4 @@
+<!-- WORKS.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -40,7 +41,7 @@ a { color:#111; text-decoration:none; }
 
 .button-container {
   display:flex; flex-direction:column; gap:12px;
-  margin-bottom:80px; /* HOME下余白広く */
+  margin-bottom:60px; /* 下に余白を拡大 */
 }
 
 @media (max-width: 768px){
@@ -86,9 +87,16 @@ a { color:#111; text-decoration:none; }
     </iframe>
   </div>
 
-  <!-- HOMEボタンのみ -->
+  <!-- HTML項目 -->
+  <div class="section">HTML</div>
   <div class="button-container">
-    <a href="../index.html" class="button-link">Home</a>
+    <a href="html-child.html" class="button-link">子ページへ</a> <!-- 子ページリンク -->
+  </div>
+
+  <!-- ボタンまとめ -->
+  <div class="button-container">
+    <a href="../index.html" class="button-link" id="home-button">Home</a> <!-- 下に余白 -->
+    <a href="https://soundcloud.com/kinotamag" target="_blank" class="button-link">SoundCloud</a>
   </div>
 </div>
 
@@ -105,6 +113,12 @@ function checkDisplay() {
 }
 window.addEventListener('resize', checkDisplay);
 checkDisplay();
+
+// HOMEボタンのスマホ1回クリックで戻る対応
+document.getElementById('home-button').addEventListener('click', function(e){
+  e.preventDefault();
+  window.location.href = this.href;
+});
 
 // Canvas 追従筆跡
 const canvas = document.getElementById("canvas");
@@ -181,6 +195,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
