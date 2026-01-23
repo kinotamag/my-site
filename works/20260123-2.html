@@ -1,7 +1,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>Falling Bodies BPM Control Thick Knob</title>
+<title>Falling Bodies Thick Touch Knob</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
 html,body{
@@ -59,12 +59,12 @@ const FLOOR_Y=()=>canvas.height-40;
 let bpm=100;
 const BPM_MIN=0,BPM_MAX=200;
 
-// ノブ設定（太い縦バー）
+// ノブ設定
 const knob={
-  x:()=>canvas.width-60,
+  x:()=> isSP ? canvas.width-140 : canvas.width-60,  // スマホは中央寄り
   y:canvas.height/2,
-  width:isSP?40:20, // バーの太さ
-  height:200,       // バー全体の高さ
+  width:isSP?80:20,  // スマホは太く
+  height:200,
   dragging:false
 };
 function bpmFactor(){ return bpm/100; }
@@ -151,17 +151,20 @@ function collide(){
   }
 }
 
-// ノブ描画（太いバー）
+// ノブ描画
 function drawKnob(){
   const x=knob.x(), y=knob.y;
   ctx.fillStyle="white";
-  ctx.fillRect(x-knob.width/2,y-knob.height/2,knob.width,knob.height);
+  ctx.fillRect(x-knob.width/2, y-knob.height/2, knob.width, knob.height);
 }
 
 // ドラッグ処理
 function startDrag(x,y){
-  const dx=x-knob.x(), dy=y-knob.y;
-  if(Math.abs(dx)<=knob.width/2 && Math.abs(dy)<=knob.height/2) knob.dragging=true;
+  const dx=x-knob.x();
+  const dy=y-knob.y;
+  const hitWidth=knob.width + (isSP?60:0);
+  const hitHeight=knob.height + (isSP?60:0);
+  if(Math.abs(dx)<=hitWidth/2 && Math.abs(dy)<=hitHeight/2) knob.dragging=true;
 }
 function moveDrag(y){
   if(!knob.dragging) return;
@@ -197,6 +200,7 @@ loop();
 </script>
 </body>
 </html>
+
 
 
 
