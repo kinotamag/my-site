@@ -33,34 +33,42 @@ a { color:#111; text-decoration:none; }
 
 .embed-wrapper { max-width:800px; width:100%; margin-top:20px; }
 
+.button-container {
+  display:flex; 
+  flex-direction:column; 
+  gap:16px;
+  margin-bottom:80px; /* 下余白 */
+  align-items:flex-start; /* PCは左揃え */
+}
+
 .button-link {
   display:inline-block; 
-  padding:18px 0;  /* 高さを大きめにして押しやすく */
+  padding:18px 0;  /* 高さ */
   background:#111; 
   color:#fff; 
   text-decoration:none; 
   font-weight:500; 
   border-radius:8px; 
   margin-top:20px;
-  width:100%; 
+  width:220px;       /* PC最大幅 */
   text-align:center; 
 }
 
-.button-container {
-  display:flex; 
-  flex-direction:column; 
-  gap:16px;
-  margin-bottom:80px; /* 下余白 */
-}
-
-@media (max-width: 768px){
+/* スマホ版 */
+@media (max-width:768px){
   .content { padding-top:15vh; padding-left:5vw; }
   h1{ font-size:3rem; }
   .subtitle{ font-size:1.2rem; }
   .section{ font-size:1rem; }
   .embed-wrapper { max-width:100%; height:auto; }
 
+  /* ボタン中央揃え・押しやすく */
   .button-container { align-items:center; }
+  .button-link {
+    width:80%;        /* スマホ幅80% */
+    max-width:300px;  /* 最大幅300px */
+    padding:22px 0;   /* 高さ大きめ */
+  }
 }
 </style>
 </head>
@@ -105,7 +113,7 @@ a { color:#111; text-decoration:none; }
   <!-- Home -->
   <div class="section">Home</div>
   <div class="button-container">
-    <a href="../index.html" class="button-link" id="home-button"></a>
+    <a href="../index.html" class="button-link"></a>
   </div>
 </div>
 
@@ -210,6 +218,7 @@ draw();
 </script>
 </body>
 </html>
+
 
 
 
