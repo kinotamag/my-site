@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Spinning Flying Blocks</title>
+<style>
+html,body{
+  margin:0;
+  background:#fff;
+  overflow:hidden;
+  height:100%;
+  touch-action:none;
+}
+.scene{
+  width:100vw;
+  height:100vh;
+  perspective:1200px;
+  position:relative;
+}
+.block{
+  position:absolute;
+  background:#000;
+  transform-style:preserve-3d;
+  border-radius:4px;
+  will-change:transform;
+  transition: transform 1s cubic-bezier(.22,.61,.36,1);
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+<div class="scene" id="scene"></div>
+
+<script>
+const scene = document.getElementById("scene");
+const blockCount = 60;
+let blocks = [];
+const screenWidth = window.innerWidth;
+const screenHeight = window.innerHeight;
+
+// ブロック生成（重なり軽減）
+function generateBlocks(){
+  blocks = [];
+  for(let i=0;i<blockCount;i++){
+    const b = document.createElement("div");
+    b.classList.add("block");
+    b.width = 30 + Math.random()*50;
+    b.height = 80 + Math.random()*160;
+    b.style.width = b.width + "px";
+    b.style.height = b.height + "px";
+
+    // 初期位置（重なり軽減）
+    let x, y, attempts=0;
+    do {
+      x = Math.random()*(screenWidth-b.width);
+      y = Math.random()*(screenHeight-b.height);
+      attempts++;
+    } while(blocks.some(bb => Math.abs(bb.x-x)<60 && Math.abs(bb.y-y)<60) && attempts<50);
+
+    b.x = x;
+    b.y = y;
+    b.style.left = b.x + "px";
+    b.style.top = b.y + "px";
+
+    b.rotX = Math.random()*30-15;
+    b.rotY = Math.random()*360;
+    b.rotZ = Math.random()*20-10;
+    b.style.transform = `rotateX(${b.rotX}deg) rotateY(${b.rotY}deg) rotateZ(${b.rotZ}deg)`;
+
+    scene.appendChild(b);
+    blocks.push(b);
+  }
+}
+
+generateBlocks();
+
+// マウス／タッチ座標
+let pointer = {x:-1000,y:-1000};
+window.addEventListener("mousemove",(e)=>{ pointer.x=e.clientX; pointer.y=e.clientY; });
+window.addEventListener("touchmove",(e)=>{ pointer.x=e.touches[0].clientX; pointer.y=e.touches[0].clientY; }, {passive:false});
+
+// ドラッグ操作
+let dragged = null;
+let offset = {x:0,y:0};
+function startDrag(e, b){
+  dragged = b;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  offset.x = clientX - b.x;
+  offset.y = clientY - b.y;
+}
+function drag(e){
+  if(dragged){
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    dragged.x = clientX - offset.x;
+    dragged.y = clientY - offset.y;
+    dragged.style.left = dragged.x + "px";
+    dragged.style.top = dragged.y + "px";
+  }
+}
+function endDrag(){ dragged=null; }
+blocks.forEach(b=>{
+  b.addEventListener("mousedown", e=>startDrag(e,b));
+  b.addEventListener("touchstart", e=>startDrag(e,b));
+});
+window.addEventListener("mousemove", drag);
+window.addEventListener("touchmove", drag, {passive:false});
+window.addEventListener("mouseup", endDrag);
+window.addEventListener("touchend", endDrag);
+
+// ランダムに飛ぶ・回転するイベント
+function spinningFly(){
+  const b = blocks[Math.floor(Math.random()*blocks.length)];
+  const flipX = Math.random()*720 - 360; // X軸回転大きく
+  const flipY = Math.random()*720 - 360; // Y軸回転大きく
+  const flipZ = Math.random()*360 - 180; // Z軸も少し回転
+  const moveX = (Math.random()*2-1)*600;
+  const moveY = (Math.random()*2-1)*400;
+  const moveZ = (Math.random()*2-1)*300;
+
+  b.style.transition = "transform 1.5s cubic-bezier(.22,.61,.36,1)";
+  b.style.transform = `
+    translate3d(${moveX}px, ${moveY}px, ${moveZ}px)
+    rotateX(${b.rotX + flipX}deg)
+    rotateY(${b.rotY + flipY}deg)
+    rotateZ(${b.rotZ + flipZ}deg)
+  `;
+
+  setTimeout(()=>{
+    // 画面外ならランダム再投入
+    const finalX = (b.x + moveX < 0 || b.x + moveX > screenWidth) ? Math.random()*(screenWidth-b.width) : b.x;
+    const finalY = (b.y + moveY < 0 || b.y + moveY > screenHeight) ? Math.random()*(screenHeight-b.height) : b.y;
+    b.x = finalX;
+    b.y = finalY;
+    b.style.transition = "transform 1s cubic-bezier(.22,.61,.36,1)";
+    b.style.left = b.x + "px";
+    b.style.top = b.y + "px";
+    b.style.transform = `rotateX(${b.rotX}deg) rotateY(${b.rotY}deg) rotateZ(${b.rotZ}deg)`;
+  },1500+Math.random()*800);
+}
+
+// 1〜3秒ごとにスピニングフライ
+setInterval(spinningFly, 1000 + Math.random()*2000);
+
+// 近づいたブロック反応
+function animate(){
+  blocks.forEach(b=>{
+    const dx = pointer.x - (b.x + b.width/2);
+    const dy = pointer.y - (b.y + b.height/2);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if(dist < 200){
+      const force = (200 - dist)/200;
+      b.style.transform = `
+        rotateX(${b.rotX + 20*force}deg)
+        rotateY(${b.rotY + 180*force}deg)
+        rotateZ(${b.rotZ}deg)
+      `;
+    }
+  });
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
