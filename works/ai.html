@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Portal-like Interactive</title>
+<style>
+html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#111; }
+canvas { display:block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let width = canvas.width = window.innerWidth;
+let height = canvas.height = window.innerHeight;
+window.addEventListener('resize', () => {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+});
+
+// グリッド設定
+const cols = 12;
+const rows = 8;
+const cellW = width / cols;
+const cellH = height / rows;
+
+// 粒子配列
+const particles = [];
+
+// 各セルの状態（ループ用）
+const grid = [];
+for(let i=0;i<cols;i++){
+  grid[i] = [];
+  for(let j=0;j<rows;j++){
+    grid[i][j] = {timer: Math.random()*60};
+  }
+}
+
+// タッチ/マウス操作
+canvas.addEventListener('pointerdown', e => {
+  triggerCell(e.clientX, e.clientY);
+});
+canvas.addEventListener('pointermove', e => {
+  if(e.pressure > 0 || e.buttons > 0) triggerCell(e.clientX, e.clientY);
+});
+
+// セルをトリガー
+function triggerCell(x, y){
+  const col = Math.floor(x / cellW);
+  const row = Math.floor(y / cellH);
+  if(col>=0 && col<cols && row>=0 && row<rows){
+    grid[col][row].timer = 60; // ループ用タイマーセット
+    spawnParticles(col, row);
+  }
+}
+
+// 粒子生成
+function spawnParticles(col, row){
+  const cx = col*cellW + cellW/2;
+  const cy = row*cellH + cellH/2;
+  for(let i=0;i<10;i++){
+    particles.push({
+      x: cx,
+      y: cy,
+      vx: (Math.random()-0.5)*6,
+      vy: (Math.random()-0.5)*6,
+      size: Math.random()*6+2,
+      life: 60+Math.random()*40,
+      color: `hsl(${Math.random()*360}, 80%, 60%)`
+    });
+  }
+}
+
+// メイン更新ループ
+function update(){
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(0,0,width,height);
+
+  // グリッドの自動ループ動作
+  for(let i=0;i<cols;i++){
+    for(let j=0;j<rows;j++){
+      const cell = grid[i][j];
+      cell.timer--;
+      if(cell.timer<=0 && Math.random()<0.02){ // 自動で粒子生成
+        cell.timer = 60 + Math.random()*60;
+        spawnParticles(i,j);
+      }
+    }
+  }
+
+  // 粒子更新
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    // 波紋回転
+    const angle = Math.sin(p.life/10) * Math.PI*0.5;
+    p.x += Math.cos(angle);
+    p.y += Math.sin(angle);
+    p.life--;
+    
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fill();
+
+    if(p.life<=0) particles.splice(i,1);
+  }
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+</body>
+</html>
