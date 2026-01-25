@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Prism CD Object</title>
+<style>
+html,body{
+  margin:0;
+  background:radial-gradient(circle at center,#050505,#000);
+  overflow:hidden;
+  touch-action:none;
+}
+canvas{display:block}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+const TAU = Math.PI*2;
+
+let rotX=0, rotY=0;
+let targetX=0, targetY=0;
+let vx=0, vy=0;
+
+canvas.addEventListener("pointermove",e=>{
+  targetY = (e.clientX/canvas.width-0.5)*1.5;
+  targetX = (e.clientY/canvas.height-0.5)*1.5;
+});
+
+function wavelengthToRGB(wl){
+  let R=0,G=0,B=0;
+  if(wl>=380 && wl<440){R=-(wl-440)/60;B=1;}
+  else if(wl<490){G=(wl-440)/50;B=1;}
+  else if(wl<510){G=1;B=-(wl-510)/20;}
+  else if(wl<580){R=(wl-510)/70;G=1;}
+  else if(wl<645){R=1;G=-(wl-645)/65;}
+  else if(wl<=780){R=1;}
+  return [R*255,G*255,B*255];
+}
+
+function rotate(p){
+  let [x,y,z]=p;
+  let cx=Math.cos(rotX), sx=Math.sin(rotX);
+  let cy=Math.cos(rotY), sy=Math.sin(rotY);
+
+  let dy=y*cx - z*sx;
+  let dz=y*sx + z*cx;
+  y=dy; z=dz;
+
+  let dx=x*cy + z*sy;
+  dz=-x*sy + z*cy;
+  x=dx; z=dz;
+
+  return [x,y,z];
+}
+
+function project(p){
+  const f=600;
+  const scale=f/(f+p[2]);
+  return [p[0]*scale, p[1]*scale];
+}
+
+function render(){
+
+  vx+=(targetX-rotX)*0.08;
+  vy+=(targetY-rotY)*0.08;
+  vx*=0.9; vy*=0.9;
+  rotX+=vx; rotY+=vy;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const cx=canvas.width/2;
+  const cy=canvas.height/2;
+
+  const R=Math.min(canvas.width,canvas.height)*0.22;
+  const inner=R*0.3;
+  const thickness=R*0.08;
+
+  const steps=200;
+
+  for(let i=0;i<steps;i++){
+    const a=i/steps*TAU;
+
+    for(let r=inner;r<R;r+=1.2){
+
+      let x=r*Math.cos(a);
+      let y=r*Math.sin(a);
+      let z=0;
+
+      let p=rotate([x,y,z]);
+
+      if(p[2]<-thickness) continue;
+
+      let proj=project(p);
+      let sx=cx+proj[0];
+      let sy=cy+proj[1];
+
+      // 回折：溝は円周方向
+      let groove=[Math.cos(a),Math.sin(a),0];
+      groove=rotate(groove);
+
+      let light=[0.4,-0.3,1];
+      let ln=Math.hypot(...light);
+      light=light.map(v=>v/ln);
+
+      let dot=groove[0]*light[0]+groove[1]*light[1]+groove[2]*light[2];
+
+      // 虹帯を作る
+      let nm=420+300*(dot*0.5+0.5);
+
+      if(nm>380 && nm<780){
+        let [Rcol,Gcol,Bcol]=wavelengthToRGB(nm);
+
+        let intensity=Math.pow(dot,4);
+        ctx.fillStyle=`rgb(${Rcol*intensity},${Gcol*intensity},${Bcol*intensity})`;
+        ctx.fillRect(sx,sy,1.2,1.2);
+      }
+    }
+  }
+
+  // 側面リング
+  ctx.beginPath();
+  for(let i=0;i<=steps;i++){
+    const a=i/steps*TAU;
+    let x=R*Math.cos(a);
+    let y=R*Math.sin(a);
+    let z=thickness;
+    let p=project(rotate([x,y,z]));
+    ctx.lineTo(cx+p[0],cy+p[1]);
+  }
+  ctx.closePath();
+  ctx.strokeStyle="rgba(255,255,255,0.2)";
+  ctx.stroke();
+
+  requestAnimationFrame(render);
+}
+
+render();
+</script>
+</body>
+</html>
