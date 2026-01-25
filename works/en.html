@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Interactive 3D Prism CDs with Art</title>
+<style>
+html,body{
+  margin:0;
+  background:#111;
+  overflow:hidden;
+  touch-action:none;
+}
+canvas{display:block;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize",resize);
+
+const TAU = Math.PI*2;
+let rotX=0, rotY=0;
+let targetX=0, targetY=0;
+let vx=0, vy=0;
+
+// マウス／タッチ追従
+canvas.addEventListener("pointermove",e=>{
+  targetY = (e.clientX/canvas.width-0.5)*2.0;
+  targetX = (e.clientY/canvas.height-0.5)*2.0;
+});
+
+// CD色
+function wavelengthToRGB(wl){
+  let R=0,G=0,B=0;
+  if(wl>=380 && wl<440){ R=-(wl-440)/60; B=1; }
+  else if(wl<490){ G=(wl-440)/50; B=1; }
+  else if(wl<510){ G=1; B=-(wl-510)/20; }
+  else if(wl<580){ R=(wl-510)/70; G=1; }
+  else if(wl<645){ R=1; G=-(wl-645)/65; }
+  else if(wl<=780){ R=1; }
+  return [R*255,G*255,B*255];
+}
+
+function rotate(p,xRot,yRot){
+  let [x,y,z]=p;
+  let cx=Math.cos(xRot), sx=Math.sin(xRot);
+  let cy=Math.cos(yRot), sy=Math.sin(yRot);
+
+  let dy=y*cx - z*sx;
+  let dz=y*sx + z*cx;
+  y=dy; z=dz;
+
+  let dx=x*cy + z*sy;
+  dz=-x*sy + z*cy;
+  x=dx; z=dz;
+
+  return [x,y,z];
+}
+
+function project(p){
+  const f=600;
+  const scale=f/(f+p[2]+1);
+  return [p[0]*scale, p[1]*scale];
+}
+
+// 粒子デザイン
+class Particle {
+  constructor(cx,cy){
+    this.x = Math.random()*canvas.width;
+    this.y = Math.random()*canvas.height;
+    this.vx = Math.random()*2-1;
+    this.vy = Math.random()*2+1;
+    this.size = Math.random()*3+1;
+    this.color = `hsl(${250+Math.random()*60},80%,60%)`;
+  }
+  update(){
+    this.x += this.vx;
+    this.y += this.vy;
+    if(this.y>canvas.height){ 
+      this.y=0; 
+      this.x=Math.random()*canvas.width;
+    }
+  }
+  draw(){
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.size,0,TAU);
+    ctx.fill();
+  }
+}
+
+const particles=[];
+for(let i=0;i<120;i++) particles.push(new Particle());
+
+// タッチで粒子を弾く
+canvas.addEventListener("pointerdown",e=>{
+  particles.forEach(p=>{
+    const dx = p.x - e.clientX;
+    const dy = p.y - e.clientY;
+    const dist = Math.hypot(dx,dy);
+    if(dist<80){
+      p.vx += dx*0.05;
+      p.vy += dy*0.05;
+    }
+  });
+});
+
+function render(){
+  vx+=(targetX-rotX)*0.04;
+  vy+=(targetY-rotY)*0.04;
+  vx*=0.9; vy*=0.9;
+  rotX+=vx; rotY+=vy;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const cx = canvas.width/2;
+  const cy = canvas.height/2;
+
+  const cdCount = 3;
+  const RBase = Math.min(canvas.width,canvas.height)*0.18;
+  const spacing = RBase*1.5;
+
+  for(let n=0;n<cdCount;n++){
+    let R = RBase;
+    let inner = R*0.3;
+    let thickness = R*0.05; 
+    let offsetX = (n-(cdCount-1)/2)*spacing;
+    let offsetY = 0;
+    const steps = 180;
+
+    for(let i=0;i<steps;i++){
+      const a = i/steps*TAU;
+      for(let r=inner;r<R;r+=1.5){
+        let x = r*Math.cos(a);
+        let y = r*Math.sin(a);
+        let z = 0;
+        let p = rotate([x,y,z], rotX+0.2*n, rotY+0.15*n);
+        let proj = project(p);
+        let sx = cx + proj[0] + offsetX;
+        let sy = cy + proj[1] + offsetY;
+
+        let groove=[Math.cos(a),Math.sin(a),0];
+        groove=rotate(groove, rotX+0.2*n, rotY+0.15*n);
+
+        let light=[0.5,-0.3,1];
+        let ln = Math.hypot(...light);
+        light = light.map(v=>v/ln);
+        let dot = groove[0]*light[0]+groove[1]*light[1]+groove[2]*light[2];
+        dot = 0.2 + 0.8*Math.max(dot,0);
+
+        let nm = 420+200*(dot*0.5+0.5); // 青紫系に寄せる
+        if(nm>380 && nm<500){
+          let [Rcol,Gcol,Bcol] = wavelengthToRGB(nm);
+          let intensity = 0.3 + Math.pow(dot,5)*1.8;
+          let factor = 1.2 + dot*1.5;
+          ctx.fillStyle=`rgb(${Math.min(Rcol*intensity*factor,255)},${Math.min(Gcol*intensity*factor,255)},${Math.min(Bcol*intensity*factor,255)})`;
+          ctx.fillRect(sx,sy,1.5,1.5);
+        }
+      }
+    }
+
+    // 側面リング
+    ctx.beginPath();
+    for(let i=0;i<=steps;i++){
+      const a = i/steps*TAU;
+      let x = R*Math.cos(a);
+      let y = R*Math.sin(a);
+      let z = thickness;
+      let p = project(rotate([x,y,z], rotX+0.2*n, rotY+0.15*n));
+      ctx.lineTo(cx+p[0]+offsetX, cy+p[1]+offsetY);
+    }
+    ctx.closePath();
+    ctx.strokeStyle="rgba(255,255,255,0.35)";
+    ctx.stroke();
+  }
+
+  // 粒子更新＆描画
+  particles.forEach(p=>{ p.update(); p.draw(); });
+
+  requestAnimationFrame(render);
+}
+render();
+</script>
+</body>
+</html>
