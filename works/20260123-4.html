@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電光掲示板 滑らかループ＋余白</title>
+<style>
+body { margin:0; background:#000; overflow:hidden; font-family: monospace; }
+.controls { position:absolute; top:10px; left:10px; color:#f00; z-index:10; }
+.controls input[type="text"] { width:400px; padding:3px; }
+.controls input[type="range"] { width:200px; }
+canvas { display:block; background:#000; }
+#boardCanvas { border:2px solid #800; position:absolute; top:50%; left:0; transform: translateY(-50%); }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <div>
+    <label>文字入力：</label>
+    <input type="text" id="textInput" value="任意のテキストを入力">
+  </div>
+  <div>
+    <label>速度調整：</label>
+    <input type="range" id="speedInput" min="1" max="15" value="5">
+  </div>
+</div>
+
+<canvas id="boardCanvas" width="1200" height="150"></canvas>
+
+<script>
+const boardCanvas = document.getElementById('boardCanvas');
+const boardCtx = boardCanvas.getContext('2d');
+const textInput = document.getElementById('textInput');
+const speedInput = document.getElementById('speedInput');
+
+let text = textInput.value;
+let speed = parseInt(speedInput.value);
+let offsetX = 0;
+const spaceWidth = 50; // ループ間の余白
+
+// 電光掲示板文字描画
+function drawBoard(){
+    boardCtx.clearRect(0,0,boardCanvas.width,boardCanvas.height);
+    boardCtx.fillStyle = "#f00";
+
+    const tempCtx = document.createElement('canvas').getContext('2d');
+    tempCtx.font = "bold 100px monospace";
+    const textWidth = tempCtx.measureText(text).width;
+
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = textWidth + 10;
+    offCanvas.height = boardCanvas.height;
+    const offCtx = offCanvas.getContext('2d');
+    offCtx.font = "bold 100px monospace";
+    offCtx.fillStyle = "white";
+    offCtx.fillText(text,0,120);
+
+    const imageData = offCtx.getImageData(0,0,offCanvas.width,offCanvas.height);
+    const data = imageData.data;
+
+    // 文字を2回描画して滑らかループ
+    const positions = [offsetX + (boardCanvas.width-textWidth)/2, offsetX + (boardCanvas.width-textWidth)/2 + textWidth + spaceWidth];
+    for(let posX of positions){
+        for(let yPos=0; yPos<offCanvas.height; yPos+=8){
+            for(let xPos=0; xPos<offCanvas.width; xPos+=8){
+                const idx = (yPos*offCanvas.width + xPos)*4;
+                if(data[idx+3]>128){
+                    boardCtx.beginPath();
+                    boardCtx.arc(xPos + posX, yPos, 4, 0, Math.PI*2);
+                    boardCtx.fill();
+                }
+            }
+        }
+    }
+
+    return textWidth + spaceWidth;
+}
+
+// アニメーション
+function animate(){
+    const totalWidth = drawBoard();
+    offsetX -= speed;
+    if(offsetX < -totalWidth) offsetX = 0; // 余白含めて滑らかループ
+    requestAnimationFrame(animate);
+}
+
+// イベント
+textInput.addEventListener('input', ()=>{ text=textInput.value||" "; offsetX=0; });
+speedInput.addEventListener('input', ()=>{ speed=parseInt(speedInput.value); });
+
+animate();
+</script>
+</body>
+</html>
