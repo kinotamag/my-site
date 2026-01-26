@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Spinning Flying Blocks</title>
+<title>Spinning Flying Blocks with Rarity</title>
 <style>
 html,body{
   margin:0;
-  background:#fff;
+  background:#111;
   overflow:hidden;
   height:100%;
   touch-action:none;
@@ -20,12 +20,26 @@ html,body{
 }
 .block{
   position:absolute;
-  background:#000;
   transform-style:preserve-3d;
   border-radius:4px;
   will-change:transform;
   transition: transform 1s cubic-bezier(.22,.61,.36,1);
   cursor:pointer;
+  background:#000; /* normal default */
+}
+.block.rare{
+  background: hsl(calc(360 * var(--rand)), 70%, 50%);
+}
+.block.ultra{
+  background: linear-gradient(135deg, #fffa, #fff);
+  box-shadow: 0 0 15px 5px #fff8;
+  animation: shine 2s infinite alternate;
+}
+
+@keyframes shine{
+  0%{ filter: brightness(1); }
+  50%{ filter: brightness(2); }
+  100%{ filter: brightness(1); }
 }
 </style>
 </head>
@@ -34,17 +48,32 @@ html,body{
 
 <script>
 const scene = document.getElementById("scene");
-const blockCount = 60;
+
+// デバイスで総数調整
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+const baseCount = 60;
+const blockCount = isMobile ? Math.floor(baseCount * 0.7) : baseCount;
+
 let blocks = [];
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
 
-// ブロック生成（重なり軽減）
+// ブロック生成（重なり軽減＋レアリティ）
 function generateBlocks(){
   blocks = [];
   for(let i=0;i<blockCount;i++){
     const b = document.createElement("div");
     b.classList.add("block");
+    
+    // レアリティ判定
+    const r = Math.random();
+    if(r < 0.05){
+      b.classList.add("ultra");
+    } else if(r < 0.20){
+      b.classList.add("rare");
+      b.style.setProperty('--rand', Math.random());
+    }
+
     b.width = 30 + Math.random()*50;
     b.height = 80 + Math.random()*160;
     b.style.width = b.width + "px";
@@ -113,9 +142,9 @@ window.addEventListener("touchend", endDrag);
 // ランダムに飛ぶ・回転するイベント
 function spinningFly(){
   const b = blocks[Math.floor(Math.random()*blocks.length)];
-  const flipX = Math.random()*720 - 360; // X軸回転大きく
-  const flipY = Math.random()*720 - 360; // Y軸回転大きく
-  const flipZ = Math.random()*360 - 180; // Z軸も少し回転
+  const flipX = Math.random()*720 - 360;
+  const flipY = Math.random()*720 - 360;
+  const flipZ = Math.random()*360 - 180;
   const moveX = (Math.random()*2-1)*600;
   const moveY = (Math.random()*2-1)*400;
   const moveZ = (Math.random()*2-1)*300;
@@ -129,7 +158,6 @@ function spinningFly(){
   `;
 
   setTimeout(()=>{
-    // 画面外ならランダム再投入
     const finalX = (b.x + moveX < 0 || b.x + moveX > screenWidth) ? Math.random()*(screenWidth-b.width) : b.x;
     const finalY = (b.y + moveY < 0 || b.y + moveY > screenHeight) ? Math.random()*(screenHeight-b.height) : b.y;
     b.x = finalX;
@@ -141,7 +169,6 @@ function spinningFly(){
   },1500+Math.random()*800);
 }
 
-// 1〜3秒ごとにスピニングフライ
 setInterval(spinningFly, 1000 + Math.random()*2000);
 
 // 近づいたブロック反応
