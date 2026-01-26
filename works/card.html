@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Spinning Flying Blocks with Rarity</title>
+<title>Cards & Flowing Water</title>
 <style>
 html,body{
   margin:0;
-  background:#111;
+  background:#fff;
   overflow:hidden;
   height:100%;
   touch-action:none;
@@ -22,174 +22,213 @@ html,body{
   position:absolute;
   transform-style:preserve-3d;
   border-radius:4px;
-  will-change:transform;
-  transition: transform 1s cubic-bezier(.22,.61,.36,1);
+  will-change:transform,top;
   cursor:pointer;
-  background:#000; /* normal default */
 }
 .block.rare{
   background: hsl(calc(360 * var(--rand)), 70%, 50%);
 }
 .block.ultra{
-  background: linear-gradient(135deg, #fffa, #fff);
-  box-shadow: 0 0 15px 5px #fff8;
+  background: linear-gradient(135deg, #ffd700, #ffec8b);
+  box-shadow: 0 0 20px 5px #fff8;
   animation: shine 2s infinite alternate;
 }
-
+.block.super{
+  background: linear-gradient(135deg, red, orange, yellow, green, cyan, blue, violet);
+  box-shadow: 0 0 25px 8px #fff8;
+  animation: shine 2s infinite alternate;
+}
 @keyframes shine{
   0%{ filter: brightness(1); }
   50%{ filter: brightness(2); }
   100%{ filter: brightness(1); }
 }
+
+/* 水表現 */
+#water{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,162,232,0.25);
+  pointer-events:none;
+  z-index:100;
+  transform: translateY(-100%);
+}
 </style>
 </head>
 <body>
 <div class="scene" id="scene"></div>
+<div id="water"></div>
 
 <script>
 const scene = document.getElementById("scene");
+const water = document.getElementById("water");
 
-// デバイスで総数調整
 const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 const baseCount = 60;
-const blockCount = isMobile ? Math.floor(baseCount * 0.7) : baseCount;
+const blockCount = isMobile ? Math.floor(baseCount*0.5) : baseCount;
 
 let blocks = [];
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
 
-// ブロック生成（重なり軽減＋レアリティ）
-function generateBlocks(){
-  blocks = [];
-  for(let i=0;i<blockCount;i++){
-    const b = document.createElement("div");
-    b.classList.add("block");
-    
-    // レアリティ判定
-    const r = Math.random();
-    if(r < 0.05){
-      b.classList.add("ultra");
-    } else if(r < 0.20){
-      b.classList.add("rare");
-      b.style.setProperty('--rand', Math.random());
-    }
+// カード生成（上から落下も可能）
+function generateBlock(fromTop=false){
+  const b = document.createElement("div");
+  b.classList.add("block");
 
-    b.width = 30 + Math.random()*50;
-    b.height = 80 + Math.random()*160;
-    b.style.width = b.width + "px";
-    b.style.height = b.height + "px";
+  const r = Math.random();
+  if(r < 0.02){ b.classList.add("super"); }
+  else if(r < 0.07){ b.classList.add("ultra"); }
+  else if(r < 0.2){ b.classList.add("rare"); b.style.setProperty('--rand', Math.random()); }
+  else{ b.style.background="#000"; }
 
-    // 初期位置（重なり軽減）
-    let x, y, attempts=0;
-    do {
-      x = Math.random()*(screenWidth-b.width);
-      y = Math.random()*(screenHeight-b.height);
-      attempts++;
-    } while(blocks.some(bb => Math.abs(bb.x-x)<60 && Math.abs(bb.y-y)<60) && attempts<50);
+  b.width = 30 + Math.random()*50;
+  b.height = 80 + Math.random()*160;
+  b.style.width = b.width+"px";
+  b.style.height = b.height+"px";
 
-    b.x = x;
-    b.y = y;
-    b.style.left = b.x + "px";
-    b.style.top = b.y + "px";
+  let x, y, attempts=0;
+  do{
+    x = Math.random()*(screenWidth-b.width);
+    y = fromTop ? -150 : Math.random()*(screenHeight-b.height);
+    attempts++;
+  }while(blocks.some(bb=>Math.abs(bb.x-x)<60 && Math.abs(bb.y-y)<60) && attempts<50);
 
-    b.rotX = Math.random()*30-15;
-    b.rotY = Math.random()*360;
-    b.rotZ = Math.random()*20-10;
-    b.style.transform = `rotateX(${b.rotX}deg) rotateY(${b.rotY}deg) rotateZ(${b.rotZ}deg)`;
+  b.x = x;
+  b.finalY = fromTop ? Math.random()*(screenHeight-b.height) : y;
+  b.y = fromTop ? -150 : b.finalY;
 
-    scene.appendChild(b);
-    blocks.push(b);
+  b.style.left = x+"px";
+  b.style.top = b.y+"px";
+
+  b.rotX = Math.random()*30-15;
+  b.rotY = Math.random()*360;
+  b.rotZ = Math.random()*20-10;
+  b.style.transform = `rotateX(${b.rotX}deg) rotateY(${b.rotY}deg) rotateZ(${b.rotZ}deg)`;
+
+  scene.appendChild(b);
+  blocks.push(b);
+
+  if(fromTop){
+    requestAnimationFrame(()=>{
+      b.style.transition="top 1.5s cubic-bezier(.22,.61,.36,1)";
+      b.style.top = b.finalY+"px";
+      b.y = b.finalY;
+    });
   }
+
+  b.addEventListener("mousedown", e=>startDrag(e,b));
+  b.addEventListener("touchstart", e=>startDrag(e,b));
 }
 
-generateBlocks();
+// 初期生成
+for(let i=0;i<blockCount;i++) generateBlock(false);
 
-// マウス／タッチ座標
-let pointer = {x:-1000,y:-1000};
-window.addEventListener("mousemove",(e)=>{ pointer.x=e.clientX; pointer.y=e.clientY; });
-window.addEventListener("touchmove",(e)=>{ pointer.x=e.touches[0].clientX; pointer.y=e.touches[0].clientY; }, {passive:false});
+// マウス／タッチ
+let pointer={x:-1000,y:-1000};
+window.addEventListener("mousemove",e=>{pointer.x=e.clientX;pointer.y=e.clientY;});
+window.addEventListener("touchmove",e=>{pointer.x=e.touches[0].clientX;pointer.y=e.touches[0].clientY;},{passive:false});
 
-// ドラッグ操作
-let dragged = null;
-let offset = {x:0,y:0};
-function startDrag(e, b){
-  dragged = b;
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  offset.x = clientX - b.x;
-  offset.y = clientY - b.y;
+// ドラッグ
+let dragged=null;
+let offset={x:0,y:0};
+function startDrag(e,b){
+  dragged=b;
+  const clientX=e.touches? e.touches[0].clientX:e.clientX;
+  const clientY=e.touches? e.touches[0].clientY:e.clientY;
+  offset.x=clientX-b.x;
+  offset.y=clientY-b.y;
 }
 function drag(e){
   if(dragged){
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    dragged.x = clientX - offset.x;
-    dragged.y = clientY - offset.y;
-    dragged.style.left = dragged.x + "px";
-    dragged.style.top = dragged.y + "px";
+    const clientX=e.touches? e.touches[0].clientX:e.clientX;
+    const clientY=e.touches? e.touches[0].clientY:e.clientY;
+    dragged.x=clientX-offset.x;
+    dragged.y=clientY-offset.y;
+    dragged.style.left=dragged.x+"px";
+    dragged.style.top=dragged.y+"px";
   }
 }
 function endDrag(){ dragged=null; }
-blocks.forEach(b=>{
-  b.addEventListener("mousedown", e=>startDrag(e,b));
-  b.addEventListener("touchstart", e=>startDrag(e,b));
-});
-window.addEventListener("mousemove", drag);
-window.addEventListener("touchmove", drag, {passive:false});
-window.addEventListener("mouseup", endDrag);
-window.addEventListener("touchend", endDrag);
+window.addEventListener("mousemove",drag);
+window.addEventListener("touchmove",drag,{passive:false});
+window.addEventListener("mouseup",endDrag);
+window.addEventListener("touchend",endDrag);
 
-// ランダムに飛ぶ・回転するイベント
+// ランダム飛び
 function spinningFly(){
   const b = blocks[Math.floor(Math.random()*blocks.length)];
-  const flipX = Math.random()*720 - 360;
-  const flipY = Math.random()*720 - 360;
-  const flipZ = Math.random()*360 - 180;
+  const flipX = Math.random()*720-360;
+  const flipY = Math.random()*720-360;
+  const flipZ = Math.random()*360-180;
   const moveX = (Math.random()*2-1)*600;
   const moveY = (Math.random()*2-1)*400;
   const moveZ = (Math.random()*2-1)*300;
-
-  b.style.transition = "transform 1.5s cubic-bezier(.22,.61,.36,1)";
-  b.style.transform = `
-    translate3d(${moveX}px, ${moveY}px, ${moveZ}px)
-    rotateX(${b.rotX + flipX}deg)
-    rotateY(${b.rotY + flipY}deg)
-    rotateZ(${b.rotZ + flipZ}deg)
-  `;
-
+  b.style.transition="transform 1.5s cubic-bezier(.22,.61,.36,1)";
+  b.style.transform = `translate3d(${moveX}px,${moveY}px,${moveZ}px)
+    rotateX(${b.rotX+flipX}deg) rotateY(${b.rotY+flipY}deg) rotateZ(${b.rotZ+flipZ}deg)`;
   setTimeout(()=>{
-    const finalX = (b.x + moveX < 0 || b.x + moveX > screenWidth) ? Math.random()*(screenWidth-b.width) : b.x;
-    const finalY = (b.y + moveY < 0 || b.y + moveY > screenHeight) ? Math.random()*(screenHeight-b.height) : b.y;
-    b.x = finalX;
-    b.y = finalY;
-    b.style.transition = "transform 1s cubic-bezier(.22,.61,.36,1)";
-    b.style.left = b.x + "px";
-    b.style.top = b.y + "px";
-    b.style.transform = `rotateX(${b.rotX}deg) rotateY(${b.rotY}deg) rotateZ(${b.rotZ}deg)`;
+    const finalX=(b.x+moveX<0||b.x+moveX>screenWidth)?Math.random()*(screenWidth-b.width):b.x;
+    const finalY=(b.y+moveY<0||b.y+moveY>screenHeight)?Math.random()*(screenHeight-b.height):b.y;
+    b.x=finalX; b.y=finalY;
+    b.style.transition="transform 1s cubic-bezier(.22,.61,.36,1)";
+    b.style.left=b.x+"px";
+    b.style.top=b.y+"px";
+    b.style.transform=`rotateX(${b.rotX}deg) rotateY(${b.rotY}deg) rotateZ(${b.rotZ}deg)`;
   },1500+Math.random()*800);
 }
+setInterval(spinningFly,1000+Math.random()*2000);
 
-setInterval(spinningFly, 1000 + Math.random()*2000);
-
-// 近づいたブロック反応
+// 近づき反応
 function animate(){
   blocks.forEach(b=>{
-    const dx = pointer.x - (b.x + b.width/2);
-    const dy = pointer.y - (b.y + b.height/2);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    if(dist < 200){
-      const force = (200 - dist)/200;
-      b.style.transform = `
-        rotateX(${b.rotX + 20*force}deg)
-        rotateY(${b.rotY + 180*force}deg)
-        rotateZ(${b.rotZ}deg)
-      `;
+    const dx=pointer.x-(b.x+b.width/2);
+    const dy=pointer.y-(b.y+b.height/2);
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<200){
+      const force=(200-dist)/200;
+      b.style.transform=`rotateX(${b.rotX+20*force}deg) rotateY(${b.rotY+180*force}deg) rotateZ(${b.rotZ}deg)`;
     }
   });
   requestAnimationFrame(animate);
 }
-
 animate();
+
+// 水イベント：30秒ごと、バケツから降るイメージ
+function waterEvent(){
+  // 水表示
+  water.style.transform="translateY(-100%)";
+  water.style.display="block";
+  water.offsetHeight;
+  water.style.transition="transform 3s linear";
+  water.style.transform="translateY(100%)";
+
+  // カードも下に流す
+  blocks.forEach(b=>{
+    b.style.transition="top 3s linear";
+    b.y = screenHeight + 200;
+    b.style.top = b.y+"px";
+  });
+
+  // 3秒後、水消して新カード上から降下
+  setTimeout(()=>{
+    water.style.display="none";
+    water.style.transition="";
+    water.style.transform="translateY(-100%)";
+
+    const removed = blocks.filter(b=>b.y>screenHeight);
+    removed.forEach(b=>scene.removeChild(b));
+    blocks = blocks.filter(b=>b.y<=screenHeight);
+
+    removed.forEach(()=> generateBlock(true));
+  },3000);
+}
+
+setInterval(waterEvent,30000);
 </script>
 </body>
 </html>
+
