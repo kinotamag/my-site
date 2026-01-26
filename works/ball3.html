@@ -1,0 +1,315 @@
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MV ENGINE — TOTAL MADNESS</title>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000}
+canvas{display:block;touch-action:none}
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+/* ================= CORE ================= */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000000,0.00025);
+
+const camera=new THREE.PerspectiveCamera(80,innerWidth/innerHeight,0.1,20000);
+camera.position.z=400;
+
+/* ================= LIGHT ================= */
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+const dl=new THREE.DirectionalLight(0xffffff,5);
+dl.position.set(500,800,600);
+scene.add(dl);
+
+/* ================= CLOCK ================= */
+const clock=new THREE.Clock();
+
+/* ================= STORAGE ================= */
+const BALLS=[];
+const SHARDS=[];
+const LIQUIDS=[];
+const LIGHTNING=[];
+const RINGS=[];
+
+/* ================= GEOMETRY ================= */
+const sphereGeo=new THREE.SphereGeometry(1,48,48);
+const shardGeo=new THREE.TetrahedronGeometry(1);
+
+/* ================= BALL FIELD ================= */
+const BALL_COUNT=1200;
+
+for(let i=0;i<BALL_COUNT;i++){
+    const mat=new THREE.MeshPhysicalMaterial({
+        color:new THREE.Color().setHSL(Math.random(),1,0.6),
+        emissive:new THREE.Color().setHSL(Math.random(),1,0.5),
+        emissiveIntensity:1.5,
+        roughness:0.15,
+        metalness:0.7,
+        transmission:Math.random()*0.5,
+        thickness:10
+    });
+    const m=new THREE.Mesh(sphereGeo,mat);
+    const baseScale=4+Math.random()*18; // ← デカい
+    m.userData={
+        baseScale,
+        vel:new THREE.Vector3(
+            (Math.random()-0.5)*6,
+            (Math.random()-0.5)*6,
+            (Math.random()-0.5)*6
+        ),
+        chaos:Math.random()*10,
+        spin:new THREE.Vector3(
+            Math.random()*0.1,
+            Math.random()*0.1,
+            Math.random()*0.1
+        ),
+        phase:Math.random()*Math.PI*2
+    };
+    m.position.set(
+        (Math.random()-0.5)*3000,
+        (Math.random()-0.5)*3000,
+        (Math.random()-0.5)*3000
+    );
+    m.scale.setScalar(baseScale);
+    scene.add(m);
+    BALLS.push(m);
+}
+
+/* ================= CAMERA CONTROL ================= */
+let yaw=0,pitch=0,drag=false,px=0,py=0;
+let grabbed=null;
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+
+addEventListener("pointerdown",e=>{
+    drag=true;px=e.clientX;py=e.clientY;
+    mouse.x=e.clientX/innerWidth*2-1;
+    mouse.y=-(e.clientY/innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const hit=raycaster.intersectObjects(BALLS);
+    if(hit.length) grabbed=hit[0].object;
+});
+addEventListener("pointerup",()=>{
+    drag=false;
+    if(grabbed){
+        megaExplosion(grabbed.position);
+        grabbed=null;
+    }
+});
+addEventListener("pointermove",e=>{
+    if(drag){
+        yaw-=(e.clientX-px)*0.002;
+        pitch-=(e.clientY-py)*0.002;
+        pitch=Math.max(-1.5,Math.min(1.5,pitch));
+        px=e.clientX;py=e.clientY;
+    }
+    if(grabbed){
+        mouse.x=e.clientX/innerWidth*2-1;
+        mouse.y=-(e.clientY/innerHeight)*2+1;
+        raycaster.setFromCamera(mouse,camera);
+        grabbed.position.copy(
+            raycaster.ray.origin
+            .add(raycaster.ray.direction.clone().multiplyScalar(300))
+        );
+    }
+});
+
+/* ================= FX ================= */
+
+// ① 破裂
+function megaExplosion(pos){
+    for(let i=0;i<120;i++){
+        const s=new THREE.Mesh(shardGeo,new THREE.MeshStandardMaterial({
+            color:0xffffff,
+            emissive:0x66ccff,
+            emissiveIntensity:2,
+            transparent:true
+        }));
+        s.position.copy(pos);
+        s.userData={
+            vel:new THREE.Vector3(
+                (Math.random()-0.5)*40,
+                (Math.random()-0.5)*40,
+                (Math.random()-0.5)*40
+            ),
+            life:2+Math.random()*2
+        };
+        scene.add(s);
+        SHARDS.push(s);
+    }
+    liquidFlood(pos);
+    lightningStrike(pos);
+    energyRing(pos);
+}
+
+// ② 液体噴出
+function liquidFlood(pos){
+    for(let i=0;i<80;i++){
+        const l=new THREE.Mesh(
+            new THREE.SphereGeometry(1,16,16),
+            new THREE.MeshPhysicalMaterial({
+                color:0x00ffff,
+                transmission:1,
+                roughness:0.05,
+                thickness:20,
+                transparent:true,
+                opacity:0.9
+            })
+        );
+        l.position.copy(pos);
+        l.userData={
+            vel:new THREE.Vector3(
+                (Math.random()-0.5)*20,
+                Math.random()*30,
+                (Math.random()-0.5)*20
+            ),
+            life:3+Math.random()*2
+        };
+        l.scale.setScalar(4+Math.random()*10);
+        scene.add(l);
+        LIQUIDS.push(l);
+    }
+}
+
+// ③ 雷
+function lightningStrike(pos){
+    const g=new THREE.BufferGeometry().setFromPoints([
+        pos,
+        pos.clone().add(new THREE.Vector3(
+            (Math.random()-0.5)*400,
+            Math.random()*600,
+            (Math.random()-0.5)*400
+        ))
+    ]);
+    const m=new THREE.LineBasicMaterial({color:0xffffff});
+    const l=new THREE.Line(g,m);
+    l.userData={life:0.2};
+    scene.add(l);
+    LIGHTNING.push(l);
+}
+
+// ④ エネルギーリング
+function energyRing(pos){
+    const r=new THREE.Mesh(
+        new THREE.TorusGeometry(1,0.3,16,64),
+        new THREE.MeshStandardMaterial({
+            color:0xff00ff,
+            emissive:0xff00ff,
+            emissiveIntensity:2,
+            transparent:true
+        })
+    );
+    r.position.copy(pos);
+    r.userData={scale:1,life:1.5};
+    scene.add(r);
+    RINGS.push(r);
+}
+
+/* ================= LOOP ================= */
+function loop(){
+    requestAnimationFrame(loop);
+    const d=clock.getDelta();
+    const t=clock.elapsedTime;
+
+    camera.rotation.set(pitch,yaw,0);
+
+    // ⑤ ボール挙動（暴走）
+    for(const b of BALLS){
+        if(b===grabbed) continue;
+        const u=b.userData;
+        u.phase+=d*4;
+        b.position.x+=Math.sin(t+u.chaos)*u.vel.x;
+        b.position.y+=Math.cos(t*1.3+u.chaos)*u.vel.y;
+        b.position.z+=Math.sin(t*0.7+u.chaos)*u.vel.z;
+        b.rotation.x+=u.spin.x;
+        b.rotation.y+=u.spin.y;
+        b.rotation.z+=u.spin.z;
+
+        // ⑥ 心拍スケール
+        const pulse=1+Math.sin(u.phase)*0.6;
+        b.scale.setScalar(u.baseScale*pulse);
+
+        // ⑦ ワープ
+        if(b.position.length()>6000){
+            b.position.multiplyScalar(-0.4);
+        }
+
+        // ⑧ 自爆ランダム
+        if(Math.random()<0.0008){
+            megaExplosion(b.position);
+        }
+    }
+
+    // ⑨ 破片
+    for(let i=SHARDS.length-1;i>=0;i--){
+        const s=SHARDS[i];
+        s.position.addScaledVector(s.userData.vel,d*60);
+        s.userData.life-=d;
+        s.material.opacity=s.userData.life;
+        if(s.userData.life<=0){
+            scene.remove(s);SHARDS.splice(i,1);
+        }
+    }
+
+    // ⑩ 液体
+    for(let i=LIQUIDS.length-1;i>=0;i--){
+        const l=LIQUIDS[i];
+        l.userData.vel.y-=1.2;
+        l.position.addScaledVector(l.userData.vel,d*60);
+        l.userData.life-=d;
+        l.material.opacity=l.userData.life/2;
+        if(l.userData.life<=0){
+            scene.remove(l);LIQUIDS.splice(i,1);
+        }
+    }
+
+    // ⑪ 雷
+    for(let i=LIGHTNING.length-1;i>=0;i--){
+        LIGHTNING[i].userData.life-=d;
+        if(LIGHTNING[i].userData.life<=0){
+            scene.remove(LIGHTNING[i]);
+            LIGHTNING.splice(i,1);
+        }
+    }
+
+    // ⑫ リング
+    for(let i=RINGS.length-1;i>=0;i--){
+        const r=RINGS[i];
+        r.userData.scale+=d*30;
+        r.scale.setScalar(r.userData.scale);
+        r.material.opacity=1-r.userData.scale/40;
+        if(r.userData.scale>40){
+            scene.remove(r);RINGS.splice(i,1);
+        }
+    }
+
+    // ⑬ 視野暴走
+    camera.fov=80+Math.sin(t*2.5)*25;
+    camera.updateProjectionMatrix();
+
+    renderer.render(scene,camera);
+}
+loop();
+
+/* ================= RESIZE ================= */
+addEventListener("resize",()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+
+</body>
+</html>
