@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MV ENGINE — INTERACTIVE</title>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000}
+canvas{display:block}
+#hint{
+position:fixed;left:10px;bottom:10px;
+color:#aaa;font:12px monospace;opacity:.6}
+</style>
+</head>
+<body>
+<div id="hint">drag / swipe : look　　WASD / touch move : move</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+<script>
+/* ================= CORE ================= */
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x000000,50,400);
+
+const camera = new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,2000);
+camera.position.set(0,0,30);
+
+/* ================= LIGHT ================= */
+
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+const dl = new THREE.DirectionalLight(0xffffff,2);
+dl.position.set(10,20,10);
+scene.add(dl);
+
+/* ================= FIELD ================= */
+
+const geo = new THREE.SphereGeometry(1,32,32);
+const objs = [];
+
+for(let i=0;i<700;i++){
+    const mat = new THREE.MeshStandardMaterial({
+        color:new THREE.Color().setHSL(Math.random(),0.4,0.75),
+        roughness:0.6
+    });
+    const m = new THREE.Mesh(geo,mat);
+    m.position.set(
+        (Math.random()-0.5)*120,
+        (Math.random()-0.5)*80,
+        -Math.random()*900
+    );
+    m.scale.setScalar(0.5+Math.random()*1.2);
+    scene.add(m);
+    objs.push(m);
+}
+
+/* ================= INPUT ================= */
+
+let yaw = 0, pitch = 0;
+let dragging = false;
+let px=0, py=0;
+
+const keys = {};
+addEventListener("keydown",e=>keys[e.code]=true);
+addEventListener("keyup",e=>keys[e.code]=false);
+
+renderer.domElement.addEventListener("pointerdown",e=>{
+    dragging=true; px=e.clientX; py=e.clientY;
+});
+addEventListener("pointerup",()=>dragging=false);
+addEventListener("pointermove",e=>{
+    if(!dragging) return;
+    yaw   -= (e.clientX-px)*0.002;
+    pitch -= (e.clientY-py)*0.002;
+    pitch = Math.max(-1.4,Math.min(1.4,pitch));
+    px=e.clientX; py=e.clientY;
+});
+
+/* ================= LOOP ================= */
+
+const clock = new THREE.Clock();
+const dir = new THREE.Vector3();
+
+function loop(){
+    requestAnimationFrame(loop);
+    const d = clock.getDelta();
+    const t = clock.elapsedTime;
+
+    /* camera look */
+    camera.rotation.set(pitch,yaw,0);
+
+    /* movement */
+    dir.set(0,0,0);
+    if(keys["KeyW"]) dir.z -= 1;
+    if(keys["KeyS"]) dir.z += 1;
+    if(keys["KeyA"]) dir.x -= 1;
+    if(keys["KeyD"]) dir.x += 1;
+    dir.normalize().applyEuler(camera.rotation);
+    camera.position.addScaledVector(dir, d*25);
+
+    /* breathing */
+    camera.fov = 50 + Math.sin(t*1.2)*6;
+    camera.updateProjectionMatrix();
+
+    /* field motion */
+    for(const o of objs){
+        const n = Math.sin(
+            o.position.x*0.02 +
+            o.position.y*0.02 +
+            t*0.8
+        );
+        o.position.z += n*1.2;
+        o.rotation.x += n*0.02;
+        o.rotation.y += n*0.015;
+
+        if(o.position.z > camera.position.z+40){
+            o.position.z -= 900;
+        }
+    }
+
+    renderer.render(scene,camera);
+}
+loop();
+
+/* ================= RESIZE ================= */
+
+addEventListener("resize",()=>{
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
