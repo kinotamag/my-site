@@ -1,0 +1,256 @@
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>MV ENGINE — CHAOS INTERACTIVE</title>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000}
+canvas{display:block;touch-action:none}
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+/* ================= CORE ================= */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000000,0.00035);
+
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,15000);
+camera.position.z=200;
+
+/* ================= LIGHT ================= */
+scene.add(new THREE.AmbientLight(0xffffff,0.35));
+const dl=new THREE.DirectionalLight(0xffffff,3);
+dl.position.set(300,600,400);
+scene.add(dl);
+
+/* ================= CLOCK ================= */
+const clock=new THREE.Clock();
+
+/* ================= OBJECTS ================= */
+const BALLS=[];
+const SHARDS=[];
+const LIQUIDS=[];
+
+const BALL_COUNT=900;
+const sphereGeo=new THREE.SphereGeometry(1,32,32);
+const shardGeo=new THREE.TetrahedronGeometry(1);
+
+/* ================= BALL FIELD ================= */
+for(let i=0;i<BALL_COUNT;i++){
+    const m=new THREE.Mesh(
+        sphereGeo,
+        new THREE.MeshStandardMaterial({
+            color:new THREE.Color().setHSL(Math.random(),0.8,0.6),
+            emissive:new THREE.Color().setHSL(Math.random(),1,0.4),
+            emissiveIntensity:0.8,
+            roughness:0.3,
+            metalness:0.4
+        })
+    );
+    m.userData={
+        scale:0.6+Math.random()*4,
+        vel:new THREE.Vector3(
+            (Math.random()-0.5)*4,
+            (Math.random()-0.5)*4,
+            (Math.random()-0.5)*4
+        ),
+        spin:new THREE.Vector3(
+            Math.random()*0.05,
+            Math.random()*0.05,
+            Math.random()*0.05
+        ),
+        chaos:Math.random(),
+        life:1
+    };
+    m.position.set(
+        (Math.random()-0.5)*1200,
+        (Math.random()-0.5)*1200,
+        (Math.random()-0.5)*1200
+    );
+    m.scale.setScalar(m.userData.scale);
+    scene.add(m);
+    BALLS.push(m);
+}
+
+/* ================= INPUT / CAMERA ================= */
+let yaw=0,pitch=0,drag=false,px=0,py=0;
+let grabbed=null;
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+
+addEventListener("pointerdown",e=>{
+    drag=true;px=e.clientX;py=e.clientY;
+    mouse.x=(e.clientX/innerWidth)*2-1;
+    mouse.y=-(e.clientY/innerHeight)*2+1;
+    raycaster.setFromCamera(mouse,camera);
+    const hit=raycaster.intersectObjects(BALLS);
+    if(hit.length){
+        grabbed=hit[0].object;
+        grabbed.userData.life=0.2;
+    }
+});
+addEventListener("pointerup",()=>{
+    drag=false;
+    if(grabbed){
+        explode(grabbed.position);
+        grabbed=null;
+    }
+});
+addEventListener("pointermove",e=>{
+    if(drag){
+        yaw-=(e.clientX-px)*0.002;
+        pitch-=(e.clientY-py)*0.002;
+        pitch=Math.max(-1.5,Math.min(1.5,pitch));
+        px=e.clientX;py=e.clientY;
+    }
+    if(grabbed){
+        mouse.x=(e.clientX/innerWidth)*2-1;
+        mouse.y=-(e.clientY/innerHeight)*2+1;
+        raycaster.setFromCamera(mouse,camera);
+        grabbed.position.copy(
+            raycaster.ray.origin
+                .add(raycaster.ray.direction.clone().multiplyScalar(200))
+        );
+    }
+});
+
+/* ================= EXPLOSION ================= */
+function explode(pos){
+    for(let i=0;i<60;i++){
+        const s=new THREE.Mesh(
+            shardGeo,
+            new THREE.MeshStandardMaterial({
+                color:0x66ccff,
+                emissive:0x4488ff,
+                emissiveIntensity:1,
+                roughness:0.2,
+                transparent:true,
+                opacity:0.9
+            })
+        );
+        s.position.copy(pos);
+        s.userData={
+            vel:new THREE.Vector3(
+                (Math.random()-0.5)*20,
+                (Math.random()-0.5)*20,
+                (Math.random()-0.5)*20
+            ),
+            life:1+Math.random()
+        };
+        scene.add(s);
+        SHARDS.push(s);
+    }
+    spawnLiquid(pos);
+}
+
+/* ================= LIQUID BURST ================= */
+function spawnLiquid(pos){
+    for(let i=0;i<40;i++){
+        const l=new THREE.Mesh(
+            new THREE.SphereGeometry(1,16,16),
+            new THREE.MeshPhysicalMaterial({
+                color:0x3399ff,
+                transmission:0.9,
+                roughness:0.05,
+                thickness:5,
+                transparent:true,
+                opacity:0.8
+            })
+        );
+        l.position.copy(pos);
+        l.userData={
+            vel:new THREE.Vector3(
+                (Math.random()-0.5)*10,
+                Math.random()*15,
+                (Math.random()-0.5)*10
+            ),
+            life:2+Math.random()
+        };
+        l.scale.setScalar(1+Math.random()*3);
+        scene.add(l);
+        LIQUIDS.push(l);
+    }
+}
+
+/* ================= LOOP ================= */
+function loop(){
+    requestAnimationFrame(loop);
+    const d=clock.getDelta();
+    const t=clock.elapsedTime;
+
+    camera.rotation.set(pitch,yaw,0);
+
+    /* BALL BEHAVIOR */
+    for(const b of BALLS){
+        if(b===grabbed) continue;
+        const u=b.userData;
+        u.vel.x+=Math.sin(t*2+u.chaos)*0.05;
+        u.vel.y+=Math.cos(t*1.5+u.chaos)*0.05;
+        u.vel.z+=Math.sin(t*1.1+u.chaos)*0.05;
+        b.position.addScaledVector(u.vel,d*60);
+        b.rotation.x+=u.spin.x;
+        b.rotation.y+=u.spin.y;
+        b.rotation.z+=u.spin.z;
+        const pulse=1+Math.sin(t*4+u.chaos*10)*0.4;
+        b.scale.setScalar(u.scale*pulse);
+        if(b.position.length()>3000){
+            b.position.multiplyScalar(-0.6);
+        }
+        if(Math.random()<0.0005){
+            explode(b.position);
+        }
+    }
+
+    /* SHARDS */
+    for(let i=SHARDS.length-1;i>=0;i--){
+        const s=SHARDS[i];
+        s.position.addScaledVector(s.userData.vel,d*60);
+        s.userData.life-=d;
+        s.material.opacity=Math.max(0,s.userData.life);
+        if(s.userData.life<=0){
+            scene.remove(s);
+            SHARDS.splice(i,1);
+        }
+    }
+
+    /* LIQUID */
+    for(let i=LIQUIDS.length-1;i>=0;i--){
+        const l=LIQUIDS[i];
+        l.userData.vel.y-=0.6;
+        l.position.addScaledVector(l.userData.vel,d*60);
+        l.userData.life-=d;
+        l.material.opacity=Math.max(0,l.userData.life/2);
+        if(l.userData.life<=0){
+            scene.remove(l);
+            LIQUIDS.splice(i,1);
+        }
+    }
+
+    camera.fov=70+Math.sin(t*1.8)*15;
+    camera.updateProjectionMatrix();
+
+    renderer.render(scene,camera);
+}
+loop();
+
+/* ================= RESIZE ================= */
+addEventListener("resize",()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+
+</body>
+</html>
+```
