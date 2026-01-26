@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <style>
-html,body{margin:0;background:black;overflow:hidden;}
+html,body{margin:0;background:black;overflow:hidden;touch-action:none;}
 canvas{display:block;}
 </style>
 </head>
@@ -69,10 +69,7 @@ void main(){
     vec3 center = vec3(0.0,0.0,0.0);
     float outer = 0.6;
     float inner = 0.15;
-    float thickness = 0.04;
 
-    // --- 円柱との交差 ---
-    vec3 oc = camPos - center;
     vec3 n = rot * vec3(0.0,0.0,1.0);
 
     float denom = dot(rayDir, n);
@@ -91,9 +88,7 @@ void main(){
         gl_FragColor = vec4(0.0); return;
     }
 
-    // 表面法線
     vec3 normal = normalize(n);
-
     vec3 lightDir = normalize(vec3(0.5,0.6,1.0));
 
     float sin_i = length(cross(normal, lightDir));
@@ -101,30 +96,22 @@ void main(){
 
     vec3 color = vec3(0.0);
 
-    // 高密度スペクトル積分
     for(float wl=380.0; wl<=780.0; wl+=5.0){
         float lambda = wl*1e-9;
         float phase = grooveSpacing*(sin_i+sin_r)/lambda;
-
         float peak = fract(phase);
         float intensity = exp(-pow(peak-0.5,2.0)/0.01);
-
         color += wavelengthToRGB(wl)*intensity;
     }
 
     color /= 80.0;
 
-    // 強めの鏡面反射
     float spec = pow(max(dot(normal,lightDir),0.0),120.0);
     color += spec;
 
-    // 環境ライト
     color += vec3(0.05);
 
-    // トーンマッピング
     color = color / (color + vec3(1.0));
-
-    // ガンマ補正
     color = pow(color, vec3(1.0/2.2));
 
     gl_FragColor = vec4(color,1.0);
@@ -160,10 +147,25 @@ const rotLoc = gl.getUniformLocation(program,"rotation");
 
 let rotation=[0,0];
 
+function updateFromPointer(x,y){
+  rotation[0]=(x/innerWidth-0.5)*2.0;
+  rotation[1]=(y/innerHeight-0.5)*2.0;
+}
+
 addEventListener("mousemove",e=>{
-  rotation[0]=(e.clientX/innerWidth-0.5)*2.0;
-  rotation[1]=(e.clientY/innerHeight-0.5)*2.0;
+  updateFromPointer(e.clientX,e.clientY);
 });
+
+// --- スマホ対応 ---
+canvas.addEventListener("touchstart",e=>{
+  const t=e.touches[0];
+  updateFromPointer(t.clientX,t.clientY);
+},{passive:false});
+
+canvas.addEventListener("touchmove",e=>{
+  const t=e.touches[0];
+  updateFromPointer(t.clientX,t.clientY);
+},{passive:false});
 
 function render(){
   gl.uniform2f(resLoc,canvas.width,canvas.height);
