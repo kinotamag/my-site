@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>LIQUID COLLAGE FIELD — TOUCH / CHAOS</title>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000}
+canvas{display:block;touch-action:none}
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+/* ================= CORE ================= */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.25;
+document.body.appendChild(renderer.domElement);
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x000000,0.00022);
+
+const camera=new THREE.PerspectiveCamera(85,innerWidth/innerHeight,0.1,30000);
+camera.position.z=700;
+
+/* ================= LIGHT ================= */
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+const dl=new THREE.DirectionalLight(0xffffff,3.5);
+dl.position.set(1200,1600,800);
+scene.add(dl);
+
+/* ================= TIME ================= */
+const clock=new THREE.Clock();
+
+/* ================= BALLS ================= */
+const BALLS=[];
+const sphereGeo=new THREE.SphereGeometry(1,48,48);
+const BALL_COUNT=520;
+
+for(let i=0;i<BALL_COUNT;i++){
+    const mat=new THREE.MeshPhysicalMaterial({
+        color:new THREE.Color().setHSL(Math.random(),0.9,0.6),
+        roughness:0.12,
+        metalness:0.75,
+        transmission:0.45,
+        thickness:20,
+        clearcoat:1,
+        emissive:new THREE.Color().setHSL(Math.random(),1,0.45),
+        emissiveIntensity:0.7
+    });
+
+    const b=new THREE.Mesh(sphereGeo,mat);
+    const scale=18+Math.random()*60;
+    b.scale.setScalar(scale);
+
+    b.position.set(
+        (Math.random()-0.5)*5000,
+        (Math.random()-0.5)*5000,
+        (Math.random()-0.5)*5000
+    );
+
+    b.userData={
+        base:scale,
+        phase:Math.random()*Math.PI*2,
+        drift:new THREE.Vector3(
+            (Math.random()-0.5)*3,
+            (Math.random()-0.5)*3,
+            (Math.random()-0.5)*3
+        ),
+        chaos:Math.random()*5,
+        pulse:Math.random()*2,
+        state:0
+    };
+
+    scene.add(b);
+    BALLS.push(b);
+}
+
+/* ================= CHAOTIC FLASHES ================= */
+const flashLight=new THREE.PointLight(0xffffff,0,2000);
+scene.add(flashLight);
+
+/* ================= LIQUID WAVES ================= */
+const waveGeo=new THREE.SphereGeometry(8000,64,64);
+const waveMat=new THREE.ShaderMaterial({
+    transparent:true,
+    side:THREE.BackSide,
+    uniforms:{uTime:{value:0}},
+    vertexShader:`
+        uniform float uTime;
+        varying vec3 vPos;
+        void main(){
+            vPos=position;
+            vec3 p=position;
+            p+=normal*sin(uTime*0.6+position.y*0.01)*120.0;
+            gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
+        }
+    `,
+    fragmentShader:`
+        uniform float uTime;
+        varying vec3 vPos;
+        void main(){
+            float n=sin(length(vPos)*0.002-uTime)*0.5+0.5;
+            vec3 col=mix(vec3(0.02,0.05,0.1),vec3(0.2,0.6,0.8),n);
+            gl_FragColor=vec4(col,0.06);
+        }
+    `
+});
+const wave=new THREE.Mesh(waveGeo,waveMat);
+scene.add(wave);
+
+/* ================= THREADS ================= */
+const THREADS=[];
+const THREAD_MAX=140;
+for(let i=0;i<THREAD_MAX;i++){
+    const g=new THREE.BufferGeometry();
+    g.setAttribute("position",new THREE.BufferAttribute(new Float32Array(6),3));
+    const m=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.15});
+    const l=new THREE.Line(g,m);
+    l.userData={a:null,b:null,life:0};
+    scene.add(l);
+    THREADS.push(l);
+}
+
+/* ================= INPUT (MOUSE + TOUCH) ================= */
+let yaw=0,pitch=0;
+let grabbing=null;
+let px=0,py=0;
+const raycaster=new THREE.Raycaster();
+const pointer=new THREE.Vector2();
+
+function setPointer(e){
+    const x=e.touches?e.touches[0].clientX:e.clientX;
+    const y=e.touches?e.touches[0].clientY:e.clientY;
+    pointer.x=x/innerWidth*2-1;
+    pointer.y=-(y/innerHeight)*2+1;
+    return {x,y};
+}
+
+function down(e){
+    const p=setPointer(e);
+    px=p.x;py=p.y;
+    raycaster.setFromCamera(pointer,camera);
+    const hit=raycaster.intersectObjects(BALLS,false);
+    if(hit.length) grabbing=hit[0].object;
+}
+function move(e){
+    const p=setPointer(e);
+    if(grabbing){
+        raycaster.setFromCamera(pointer,camera);
+        grabbing.position.copy(
+            raycaster.ray.origin.add(
+                raycaster.ray.direction.clone().multiplyScalar(600)
+            )
+        );
+    }else{
+        yaw-=(p.x-px)*0.002;
+        pitch-=(p.y-py)*0.002;
+        pitch=Math.max(-1.5,Math.min(1.5,pitch));
+    }
+    px=p.x;py=p.y;
+}
+function up(){grabbing=null;}
+
+addEventListener("mousedown",down);
+addEventListener("mousemove",move);
+addEventListener("mouseup",up);
+addEventListener("touchstart",down,{passive:false});
+addEventListener("touchmove",move,{passive:false});
+addEventListener("touchend",up);
+
+/* ================= LOOP ================= */
+function loop(){
+    requestAnimationFrame(loop);
+    const d=clock.getDelta();
+    const t=clock.elapsedTime;
+
+    camera.rotation.set(pitch,yaw,0);
+    waveMat.uniforms.uTime.value=t;
+
+    /* RANDOM FLASH */
+    if(Math.random()<0.01){
+        const b=BALLS[Math.random()*BALLS.length|0];
+        flashLight.position.copy(b.position);
+        flashLight.intensity=15;
+    }
+    flashLight.intensity*=0.9;
+
+    for(const b of BALLS){
+        if(b===grabbing) continue;
+        const u=b.userData;
+        u.phase+=d*(0.5+u.chaos);
+
+        /* CRAZY MOTION */
+        b.position.x+=Math.sin(t*0.7+u.phase)*u.drift.x*6;
+        b.position.y+=Math.cos(t*0.9+u.phase)*u.drift.y*6;
+        b.position.z+=Math.sin(t*1.1+u.phase)*u.drift.z*6;
+
+        /* PULSE / EXPLODE */
+        const pulse=1+Math.sin(t*2+u.phase)*0.4;
+        b.scale.setScalar(u.base*pulse);
+
+        if(Math.random()<0.002){
+            b.material.emissiveIntensity=3.5;
+            u.drift.multiplyScalar(-1);
+        }else{
+            b.material.emissiveIntensity*=0.97;
+        }
+
+        if(b.position.length()>9000){
+            b.position.multiplyScalar(-0.3);
+        }
+    }
+
+    for(const l of THREADS){
+        l.userData.life-=d;
+        if(l.userData.life<=0){
+            l.userData.a=BALLS[Math.random()*BALLS.length|0];
+            l.userData.b=BALLS[Math.random()*BALLS.length|0];
+            l.userData.life=4+Math.random()*8;
+        }
+        const p=l.geometry.attributes.position.array;
+        p[0]=l.userData.a.position.x;
+        p[1]=l.userData.a.position.y;
+        p[2]=l.userData.a.position.z;
+        p[3]=l.userData.b.position.x;
+        p[4]=l.userData.b.position.y;
+        p[5]=l.userData.b.position.z;
+        l.geometry.attributes.position.needsUpdate=true;
+        l.material.opacity=0.05+Math.abs(Math.sin(t+l.userData.life))*0.25;
+    }
+
+    camera.fov=85+Math.sin(t*1.3)*14;
+    camera.updateProjectionMatrix();
+
+    renderer.render(scene,camera);
+}
+loop();
+
+/* ================= RESIZE ================= */
+addEventListener("resize",()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
