@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+Put your HTML text here<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -9,16 +9,19 @@ html,body{margin:0;padding:0;overflow:hidden;background:#111;height:100%;touch-a
 canvas{display:block;width:100%;height:100%;}
 button{
     position:absolute;
-    font-size:1.5rem;
+    font-family:sans-serif; /* 共通フォント */
+    font-size:1.2rem;
     padding:0.5rem 0.8rem;
     border:none;
     border-radius:0.4rem;
     cursor:pointer;
     background:#444;color:white;
+    user-select:none;
+    -webkit-user-select:none;
 }
 #arrowBtn{top:10px;right:10px;}
 #resetBtn{top:10px;left:10px;}
-#playBtn{top:100px;left:400px;} /* リセットから少し下に移動 */
+#playBtn{top:100px;left:50%;transform:translateX(-50%);} /* 中央配置 */
 #zoomKnob{
     position:absolute;
     bottom:30px;
@@ -60,9 +63,9 @@ button{
 </head>
 <body>
 <canvas id="c"></canvas>
-<button id="arrowBtn">🏹</button>
-<button id="resetBtn" onclick="location.reload()">⭮</button>
-<button id="playBtn">⏸️</button>
+<button id="arrowBtn">矢を発射</button>
+<button id="resetBtn" onclick="location.reload()">リセット</button>
+<button id="playBtn">停止</button>
 <div id="zoomKnob">
     <div id="zoomLabels">
         <div id="zoomOutLabel">Out</div>
@@ -181,10 +184,8 @@ document.getElementById('arrowBtn').addEventListener('click',()=>{
 const knob = document.getElementById('zoomKnob');
 const handle = document.getElementById('zoomHandle');
 let knobDown=false;
-
-// Zoomステップ（Out側をより大きく）
 const zoomSteps=[-10,-8,-6,-4,-2,0,2,4,6,8,10];
-let currentStep=4; // Out側から4段階の位置
+let currentStep=4;
 const baseRadius=radius;
 
 function updateCameraByStep(step){
@@ -213,9 +214,10 @@ document.addEventListener('touchend', e=>{knobDown=false;});
 document.addEventListener('touchmove', e=>{if(knobDown) updateCameraByY(e.touches[0].clientY);});
 
 let running=true;
-document.getElementById('playBtn').addEventListener('click', ()=>{
+const playBtn=document.getElementById('playBtn');
+playBtn.addEventListener('click', ()=>{
     running=!running;
-    document.getElementById('playBtn').textContent = running ? "⏸️" : "▶️";
+    playBtn.textContent = running ? "停止" : "再生"; // 絵文字 → 文字
 });
 
 function animate(){
