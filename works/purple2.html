@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ぷにぷにスライム＋矢＋正確ズーム</title>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#111;height:100%;touch-action:none;}
+canvas{display:block;width:100%;height:100%;}
+button{
+    position:absolute;
+    font-size:1.5rem;
+    padding:0.5rem 0.8rem;
+    border:none;
+    border-radius:0.4rem;
+    cursor:pointer;
+    background:#444;color:white;
+}
+#arrowBtn{top:10px;right:10px;}
+#resetBtn{top:10px;left:10px;}
+#playBtn{top:100px;left:400px;} /* リセットから少し下に移動 */
+#zoomKnob{
+    position:absolute;
+    bottom:30px;
+    right:30px;
+    width:60px;
+    height:180px;
+    background:#666;
+    border-radius:10px;
+    touch-action:none;
+}
+#zoomHandle{
+    width:100%;
+    height:20px;
+    background:#aaa;
+    border-radius:10px;
+    cursor:pointer;
+    touch-action:none;
+    position:absolute;
+}
+#zoomLabels{
+    position:absolute;
+    width:100%;
+    height:100%;
+    top:0;
+    left:0;
+    pointer-events:none;
+    font-family:sans-serif;
+    font-size:0.8rem;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    align-items:center;
+    padding:5px 0;
+    color:white;
+}
+#zoomLabels #zoomInLabel{order:2;}  /* 下にZoom */
+#zoomLabels #zoomOutLabel{order:1;} /* 上にOut */
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="arrowBtn">🏹</button>
+<button id="resetBtn" onclick="location.reload()">⭮</button>
+<button id="playBtn">⏸️</button>
+<div id="zoomKnob">
+    <div id="zoomLabels">
+        <div id="zoomOutLabel">Out</div>
+        <div id="zoomInLabel">Zoom</div>
+    </div>
+    <div id="zoomHandle"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
+<script>
+const canvas=document.getElementById('c');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x111111);
+
+const isMobile=window.innerWidth<768;
+const camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,100);
+let baseZ=8;
+camera.position.set(0,0,baseZ);
+camera.lookAt(0,0,0);
+
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+
+const SEG=128;
+const radius=isMobile?1.2:1.5;
+const geo=new THREE.SphereGeometry(radius,SEG,SEG);
+const mat=new THREE.MeshStandardMaterial({
+    color:0x8070ff,
+    roughness:0.35,
+    metalness:0.25,
+    transparent:true,
+    opacity:0.85,
+    side:THREE.DoubleSide
+});
+const slime=new THREE.Mesh(geo,mat);
+scene.add(slime);
+
+const light=new THREE.DirectionalLight(0xffffff,1.5);
+light.position.set(10,15,10);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x666666));
+
+const original=geo.attributes.position.array.slice();
+const velocities=new Float32Array(original.length);
+const influenceRadius=2.0;
+const pushStrength=0.22;
+const returnSpeed=0.04;
+const inertia=0.06;
+const mobileSpeedFactor=isMobile?0.5:1.0;
+
+let pointer=new THREE.Vector2(0,0);
+let isDown=false,lastX=0,lastY=0;
+let effectActive=false;
+let effectTime=0;
+
+canvas.addEventListener('pointerdown', e=>{
+    isDown=true;
+    lastX=e.clientX; lastY=e.clientY;
+    pointer.x=(e.clientX/window.innerWidth)*2-1;
+    pointer.y=-(e.clientY/window.innerHeight)*2+1;
+    const raycaster=new THREE.Raycaster();
+    raycaster.setFromCamera(pointer,camera);
+    const intersects=raycaster.intersectObject(slime);
+    if(intersects.length>0){effectActive=true; effectTime=0;}
+});
+canvas.addEventListener('pointerup', e=>{isDown=false;});
+canvas.addEventListener('pointermove', e=>{
+    pointer.x=(e.clientX/window.innerWidth)*2-1;
+    pointer.y=-(e.clientY/window.innerHeight)*2+1;
+    if(isDown){
+        const dx=(e.clientX-lastX)*0.005;
+        const dy=(e.clientY-lastY)*0.005;
+        camera.position.applyAxisAngle(new THREE.Vector3(0,1,0),-dx);
+        camera.position.applyAxisAngle(new THREE.Vector3(1,0,0),-dy);
+        camera.lookAt(0,0,0);
+    }
+    lastX=e.clientX; lastY=e.clientY;
+});
+canvas.addEventListener('touchstart', e=>{
+    isDown=true; lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+    pointer.x=(e.touches[0].clientX/window.innerWidth)*2-1;
+    pointer.y=-(e.touches[0].clientY/window.innerHeight)*2+1;
+    const raycaster=new THREE.Raycaster();
+    raycaster.setFromCamera(pointer,camera);
+    const intersects=raycaster.intersectObject(slime);
+    if(intersects.length>0){effectActive=true; effectTime=0;}
+});
+canvas.addEventListener('touchend', e=>{isDown=false;});
+canvas.addEventListener('touchmove', e=>{
+    pointer.x=(e.touches[0].clientX/window.innerWidth)*2-1;
+    pointer.y=-(e.touches[0].clientY/window.innerHeight)*2+1;
+    if(isDown){
+        const dx=(e.touches[0].clientX-lastX)*0.005;
+        const dy=(e.touches[0].clientY-lastY)*0.005;
+        camera.position.applyAxisAngle(new THREE.Vector3(0,1,0),-dx);
+        camera.position.applyAxisAngle(new THREE.Vector3(1,0,0),-dy);
+        camera.lookAt(0,0,0);
+    }
+    lastX=e.touches[0].clientX; lastY=e.touches[0].clientY;
+});
+
+const ray=new THREE.Raycaster();
+let arrows=[];
+document.getElementById('arrowBtn').addEventListener('click',()=>{
+    for(let i=0;i<3;i++){
+        const arrowGeo=new THREE.CylinderGeometry(0.05,0.05,1,6);
+        const arrowMat=new THREE.MeshStandardMaterial({color:0xffaa33,metalness:0.6,roughness:0.4});
+        const arrow=new THREE.Mesh(arrowGeo,arrowMat);
+        arrow.rotation.z=Math.PI/2;
+        arrow.position.set(-14,Math.random()*1-0.5,Math.random()*1-0.5);
+        arrow.userData={speed:2.0+Math.random()*0.5,hit:false,impactTime:0,reactionType:Math.floor(Math.random()*5)};
+        scene.add(arrow);
+        arrows.push(arrow);
+    }
+});
+
+const knob = document.getElementById('zoomKnob');
+const handle = document.getElementById('zoomHandle');
+let knobDown=false;
+
+// Zoomステップ（Out側をより大きく）
+const zoomSteps=[-10,-8,-6,-4,-2,0,2,4,6,8,10];
+let currentStep=4; // Out側から4段階の位置
+const baseRadius=radius;
+
+function updateCameraByStep(step){
+    currentStep=step;
+    const zoomValue=zoomSteps[step];
+    baseZ=8-zoomValue;
+    camera.position.set(0,0,baseZ);
+    camera.lookAt(0,0,0);
+    const scaleFactor=Math.pow(1.1,zoomValue);
+    slime.scale.set(baseRadius*scaleFactor/baseRadius, baseRadius*scaleFactor/baseRadius, baseRadius*scaleFactor/baseRadius);
+    handle.style.top = `${(step/(zoomSteps.length-1))*100}%`;
+}
+
+function updateCameraByY(y){
+    const rect = knob.getBoundingClientRect();
+    let t=Math.min(Math.max((y-rect.top)/rect.height,0),1);
+    let nearestStep=Math.round(t*(zoomSteps.length-1));
+    updateCameraByStep(nearestStep);
+}
+
+handle.addEventListener('pointerdown', e=>{knobDown=true; updateCameraByY(e.clientY); e.preventDefault();});
+document.addEventListener('pointerup', e=>{knobDown=false;});
+document.addEventListener('pointermove', e=>{if(knobDown) updateCameraByY(e.clientY);});
+handle.addEventListener('touchstart', e=>{knobDown=true; updateCameraByY(e.touches[0].clientY); e.preventDefault();});
+document.addEventListener('touchend', e=>{knobDown=false;});
+document.addEventListener('touchmove', e=>{if(knobDown) updateCameraByY(e.touches[0].clientY);});
+
+let running=true;
+document.getElementById('playBtn').addEventListener('click', ()=>{
+    running=!running;
+    document.getElementById('playBtn').textContent = running ? "⏸️" : "▶️";
+});
+
+function animate(){
+    requestAnimationFrame(animate);
+    if(running){
+        const pos=geo.attributes.position.array;
+        if(effectActive){
+            ray.setFromCamera(pointer,camera);
+            const intersects=ray.intersectObject(slime);
+            for(let i=0;i<pos.length;i+=3){
+                let vx=velocities[i],vy=velocities[i+1],vz=velocities[i+2];
+                let dx=original[i]-pos[i],dy=original[i+1]-pos[i+1],dz=original[i+2]-pos[i+2];
+                vx+=dx*returnSpeed; vy+=dy*returnSpeed; vz+=dz*returnSpeed;
+                if(intersects.length>0){
+                    const p=intersects[0].point;
+                    let ddx=pos[i]-p.x,dyy=pos[i+1]-p.y,ddz=pos[i+2]-p.z;
+                    let d=Math.sqrt(ddx*ddx+dyy*dyy+ddz*ddz);
+                    if(d<influenceRadius){
+                        let f=(influenceRadius-d)/influenceRadius*pushStrength;
+                        vx+=ddx/d*f; vy+=dyy/d*f*2; vz+=ddz/d*f;
+                    }
+                }
+                vx*=(1-inertia); vy*=(1-inertia); vz*=(1-inertia);
+                velocities[i]=vx; velocities[i+1]=vy; velocities[i+2]=vz;
+                pos[i]+=vx*mobileSpeedFactor; pos[i+1]+=vy*mobileSpeedFactor; pos[i+2]+=vz*mobileSpeedFactor;
+            }
+            geo.attributes.position.needsUpdate=true;
+            geo.computeVertexNormals();
+            effectTime++;
+            if(effectTime>120) effectActive=false;
+        }
+
+        arrows.forEach((a,i)=>{
+            a.position.x += a.userData.speed;
+            if(!a.userData.hit){
+                const dx=slime.position.x-a.position.x;
+                const dy=slime.position.y-a.position.y;
+                const dz=slime.position.z-a.position.z;
+                if(Math.sqrt(dx*dx+dy*dy+dz*dz)<radius*1.1){
+                    a.userData.hit=true; a.userData.impactTime=0;
+                }
+            } else {
+                const t=a.userData.impactTime;
+                const type=a.userData.reactionType;
+                let shockStrength=Math.exp(-t*0.15)*0.6;
+                const pos=geo.attributes.position.array;
+                for(let j=0;j<pos.length;j+=3){
+                    const dx=pos[j]-slime.position.x;
+                    const dy=pos[j+1]-slime.position.y;
+                    const dz=pos[j+2]-slime.position.z;
+                    const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+                    if(d<radius*2){
+                        switch(type){
+                            case 0: pos[j]+=dx/d*shockStrength*Math.sin(t*0.5+dx*5); pos[j+1]+=dy/d*shockStrength*Math.cos(t*0.5+dy*5); break;
+                            case 1: pos[j]+=dx/d*shockStrength*Math.cos(t*0.3+dy*3); pos[j+1]+=dy/d*shockStrength*Math.sin(t*0.3+dx*3); break;
+                            case 2: pos[j]+=dx/d*shockStrength*Math.sin(t*0.7+dz*4); pos[j+2]+=dz/d*shockStrength*Math.cos(t*0.7+dx*4); break;
+                            case 3: pos[j]+=dx/d*shockStrength*Math.sin(t*0.4+dx*6); pos[j+1]+=dy/d*shockStrength*Math.sin(t*0.4+dy*6); pos[j+2]+=dz/d*shockStrength*Math.cos(t*0.4+dz*6); break;
+                            case 4: pos[j]+=dx/d*shockStrength*Math.sin(t*0.6+dx*7); pos[j+1]+=dy/d*shockStrength*Math.cos(t*0.6+dy*7); pos[j+2]+=dz/d*shockStrength*Math.sin(t*0.6+dz*7); break;
+                        }
+                    }
+                }
+                a.userData.impactTime++;
+                if(a.userData.impactTime>30){scene.remove(a); arrows.splice(i,1);}
+            }
+        });
+
+        for(let i=0;i<pos.length;i++){
+            velocities[i]+=(original[i]-pos[i])*0.05;
+            pos[i]+=velocities[i]*mobileSpeedFactor;
+        }
+        geo.attributes.position.needsUpdate=true;
+        geo.computeVertexNormals();
+
+        slime.rotation.y+=0.002*mobileSpeedFactor;
+        slime.position.y=0.15*Math.sin(Date.now()*0.003*mobileSpeedFactor);
+    }
+
+    renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+    camera.aspect=window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+updateCameraByStep(currentStep);
+</script>
+</body>
+</html>
