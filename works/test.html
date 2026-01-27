@@ -318,13 +318,17 @@ exportBtn.style.right = "10px";
 document.body.appendChild(exportBtn);
 
 exportBtn.addEventListener('click', () => {
+
     const exporter = new OBJExporter();
 
-  slime.updateMatrixWorld(true);
+    // 現在の変形済みジオメトリを完全コピー
+    const bakedGeometry = slime.geometry.clone();
 
-const exportMesh = slime.clone(true);
-exportMesh.geometry = slime.geometry.clone();
-exportMesh.updateMatrixWorld(true);
+    // ワールド変換を焼き込む（scale / rotation / position）
+    slime.updateMatrixWorld(true);
+    bakedGeometry.applyMatrix4(slime.matrixWorld);
+
+    const exportMesh = new THREE.Mesh(bakedGeometry);
 
     const result = exporter.parse(exportMesh);
 
