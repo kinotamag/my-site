@@ -140,8 +140,7 @@ function playSnare(){
   backdrop-filter:blur(5px);
   z-index:100;
 ">RESET</button>
-
-<script>
+  
 const resetBtn = document.getElementById("resetBtn");
 
 resetBtn.addEventListener("click", resetAll);
@@ -169,8 +168,6 @@ resetBtn.addEventListener("touchstart", e => {
   e.preventDefault();
   resetAll();
 }, {passive:false});
-</script>
-
 
 // ===== 描画 =====
 function draw(){
