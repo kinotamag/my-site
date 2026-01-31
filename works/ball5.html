@@ -2,73 +2,220 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
-body {
-  margin: 0;
-  overflow: hidden;
-  background: white;
-}
-canvas { display: block; }
+body{margin:0;overflow:hidden;background:black;touch-action:none;}
+canvas{display:block;}
 </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
-
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
+resize();
+window.addEventListener("resize",resize);
 
-let mouse = { x: canvas.width/2, y: canvas.height/2 };
-let pen = { x: mouse.x, y: mouse.y };
-let lastPen = { x: pen.x, y: pen.y };
+// ===== マウス/タッチ =====
+let mouse={x:canvas.width/2,y:canvas.height/2};
+let pen={x:mouse.x,y:mouse.y};
+let lastPen={x:pen.x,y:pen.y};
+const ease=0.18;
+const maxWidth=22;
+const minWidth=2;
 
-const ease = 0.25;   // 慣性（小さいほど遅れる）
-const maxWidth = 30;
-const minWidth = 1;
+// ===== 化身 =====
+let ghostPen={x:pen.x,y:pen.y};
+let lastGhost={x:ghostPen.x,y:ghostPen.y};
 
-window.addEventListener("mousemove", e => {
-  mouse.x = e.clientX;
-  mouse.y = e.clientY;
-});
+// ===== 軌跡 =====
+let trail=[]; let ghostTrail=[];
+const maxTrail=100;
 
-function draw() {
+// ===== 横棒音階 =====
+const scale=[0,2,3,5,7,8,10]; // minor
+const octaves=3;
+function getScaleY(){
+  let arr=[];
+  const total=scale.length*octaves;
+  for(let i=0;i<total;i++){
+    arr.push(canvas.height-(i/(total-1))*canvas.height);
+  }
+  return arr;
+}
+let scaleY=getScaleY();
+window.addEventListener("resize",()=>{scaleY=getScaleY();});
 
-  // 仮想ペンがマウスに追従
-  pen.x += (mouse.x - pen.x) * ease;
-  pen.y += (mouse.y - pen.y) * ease;
+// ===== 粒子 =====
+const particles=[];
+const maxParticles=40;
+for(let i=0;i<maxParticles;i++){
+  const speed=Math.random()*3+0.5;
+  const angle=Math.random()*Math.PI*2;
+  particles.push({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    vx: Math.cos(angle)*speed,
+    vy: Math.sin(angle)*speed,
+    radius: Math.random()*8+2,
+    hue: Math.random()*360
+  });
+}
 
-  // 本当の速度を計算
-  const dx = pen.x - lastPen.x;
-  const dy = pen.y - lastPen.y;
-  const speed = Math.sqrt(dx*dx + dy*dy);
+// ===== ポインタ =====
+function setPointer(x,y){ mouse.x=x; mouse.y=y; }
+window.addEventListener("mousemove",e=>setPointer(e.clientX,e.clientY));
+window.addEventListener("touchmove",e=>{e.preventDefault();const t=e.touches[0];setPointer(t.clientX,t.touches[0].clientY);},{passive:false});
 
-  // 速度→線幅（速いほど細い）
-  let width = maxWidth - speed * 2;
-  if (width < minWidth) width = minWidth;
+// ===== WebAudio =====
+let audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+let osc=audioCtx.createOscillator();
+let gain=audioCtx.createGain();
+let filter=audioCtx.createBiquadFilter();
+osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+osc.start(); gain.gain.value=0;
+let oscTypes=["sine","square","triangle","sawtooth"];
+function randomOsc(){osc.type=oscTypes[Math.floor(Math.random()*oscTypes.length)];}
+window.addEventListener("pointerdown",()=>audioCtx.resume());
 
-  ctx.beginPath();
-  ctx.moveTo(lastPen.x, lastPen.y);
-  ctx.lineTo(pen.x, pen.y);
-  ctx.lineCap = "round";
-  ctx.lineWidth = width;
-  ctx.strokeStyle = "black";
-  ctx.stroke();
+// --- 粒子合体用キック・スネア ---
+function playKick(){
+  const o=audioCtx.createOscillator();
+  const g=audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type="sine";
+  o.frequency.setValueAtTime(150,audioCtx.currentTime);
+  g.gain.setValueAtTime(0.5,audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(50,audioCtx.currentTime+0.15);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.15);
+  o.start(); o.stop(audioCtx.currentTime+0.15);
+}
+function playSnare(){
+  const buffer=audioCtx.createBuffer(1, audioCtx.sampleRate*0.15, audioCtx.sampleRate); // 短め
+  const data=buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++){
+    data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*10); // より早く減衰
+  }
+  const noise=audioCtx.createBufferSource();
+  noise.buffer=buffer;
+  const gainNode=audioCtx.createGain();
+  gainNode.gain.setValueAtTime(0.15,audioCtx.currentTime); // 音量下げる
+  noise.connect(gainNode).connect(audioCtx.destination);
+  noise.start();
+}
 
-  lastPen.x = pen.x;
-  lastPen.y = pen.y;
+// ===== 描画 =====
+function draw(){
+  ctx.fillStyle="rgba(0,0,0,0.12)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // 横棒描画
+  ctx.strokeStyle="rgba(255,255,255,0.05)";
+  ctx.lineWidth=1;
+  scaleY.forEach(y=>{
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(canvas.width,y);
+    ctx.stroke();
+  });
+
+  // 粒子
+  for(let i=0;i<particles.length;i++){
+    let p=particles[i];
+    p.x+=p.vx;
+    p.y+=p.vy;
+    if(p.x<0||p.x>canvas.width)p.vx*=-1;
+    if(p.y<0||p.y>canvas.height)p.vy*=-1;
+
+    // 合体判定
+    for(let j=i+1;j<particles.length;j++){
+      let q=particles[j];
+      let dx=p.x-q.x, dy=p.y-q.y, dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<p.radius+q.radius){
+        let newRadius=Math.sqrt(p.radius*p.radius+q.radius*q.radius);
+        p.radius=newRadius;
+        p.hue=(p.hue+q.hue)/2;
+        // ランダムでキック or スネア
+        if(Math.random()<0.5) playKick(); else playSnare();
+        q.x=Math.random()*canvas.width;
+        q.y=Math.random()*canvas.height;
+        q.radius=Math.random()*8+2;
+        q.hue=Math.random()*360;
+      }
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+    ctx.fillStyle=`hsl(${p.hue},70%,60%)`;
+    ctx.fill();
+  }
+
+  // 本体追従 + ランダムカクカク
+  let randOffsetX=(Math.random()-0.5)*5;
+  let randOffsetY=(Math.random()-0.5)*5;
+  pen.x+=(mouse.x-pen.x)*ease+randOffsetX;
+  pen.y+=(mouse.y-pen.y)*ease+randOffsetY;
+
+  // 音階にスナップ
+  let closestY=scaleY.reduce((a,b)=>Math.abs(b-pen.y)<Math.abs(a-pen.y)?b:a);
+  pen.y=closestY;
+
+  const dx=pen.x-lastPen.x;
+  const dy=pen.y-lastPen.y;
+  const speed=Math.sqrt(dx*dx+dy*dy);
+  let width=maxWidth-speed*1.5;
+  if(width<minWidth) width=minWidth;
+
+  const degree=scaleY.indexOf(closestY)%scale.length;
+  const hue=degree/scale.length*360;
+
+  trail.push({x:pen.x,y:pen.y,width,hue});
+  if(trail.length>maxTrail) trail.shift();
+
+  // 化身
+  ghostPen.x+=(pen.x-ghostPen.x)*0.1;
+  ghostPen.y+=(pen.y-ghostPen.y)*0.1;
+  let ghostWidth=width*0.7;
+  ghostTrail.push({x:ghostPen.x,y:ghostPen.y,width:ghostWidth});
+  if(ghostTrail.length>maxTrail) ghostTrail.shift();
+
+  for(let i=1;i<ghostTrail.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(ghostTrail[i-1].x, ghostTrail[i-1].y);
+    ctx.lineTo(ghostTrail[i].x, ghostTrail[i].y);
+    ctx.strokeStyle="rgba(255,255,255,0.6)";
+    ctx.lineWidth=ghostTrail[i].width;
+    ctx.lineCap="round";
+    ctx.stroke();
+  }
+
+  for(let i=1;i<trail.length;i++){
+    ctx.beginPath();
+    ctx.moveTo(trail[i-1].x, trail[i-1].y);
+    ctx.lineTo(trail[i].x, trail[i].y);
+    ctx.strokeStyle=`hsl(${trail[i].hue},80%,60%)`;
+    ctx.lineWidth=trail[i].width;
+    ctx.lineCap="round";
+    ctx.stroke();
+  }
+
+  lastPen.x=pen.x; lastPen.y=pen.y;
+  lastGhost.x=ghostPen.x; lastGhost.y=ghostPen.y;
+
+  // 本体線の音
+  let freq=220+(canvas.height-pen.y)/canvas.height*880;
+  osc.frequency.setTargetAtTime(freq,audioCtx.currentTime,0.01);
+  let vol=Math.min(speed/30,0.8);
+  vol=Math.max(vol,0.08);
+  gain.gain.setTargetAtTime(vol,audioCtx.currentTime,0.03);
+
+  if(Math.random()<0.005) randomOsc();
 
   requestAnimationFrame(draw);
 }
-
 draw();
-
-window.addEventListener("resize", () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-});
 </script>
 </body>
 </html>
