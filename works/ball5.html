@@ -25,6 +25,7 @@ canvas{display:block;}
 <body>
 <canvas id="canvas"></canvas>
 <button id="resetBtn">RESET</button>
+
 <script>
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
@@ -127,47 +128,21 @@ function playSnare(){
 }
 
 // ===== リセットボタン =====
-<button id="resetBtn" style="
-  position:fixed;
-  right:20px;
-  bottom:20px;
-  padding:15px 25px;
-  font-size:18px;
-  border:none;
-  border-radius:12px;
-  background:rgba(255,255,255,0.3);
-  color:white;
-  backdrop-filter:blur(5px);
-  z-index:100;
-">RESET</button>
-  
 const resetBtn = document.getElementById("resetBtn");
 
 resetBtn.addEventListener("click", resetAll);
+resetBtn.addEventListener("touchstart", e => { e.preventDefault(); resetAll(); }, {passive:false});
 
-// 高機能リセット関数
 function resetAll() {
-  // 軌跡リセット
-  if(typeof trail !== "undefined") trail.length = 0;
-  if(typeof ghostTrail !== "undefined") ghostTrail.length = 0;
-
-  // 粒子リセット
+  trail.length = 0;
+  ghostTrail.length = 0;
   if(typeof initParticles === "function") initParticles();
 
-  // ペン・化身リセット
-  if(typeof mouse !== "undefined" && typeof pen !== "undefined" && typeof ghostPen !== "undefined") {
-    pen.x = mouse.x; pen.y = mouse.y;
-    lastPen.x = pen.x; lastPen.y = pen.y;
-    ghostPen.x = pen.x; ghostPen.y = pen.y;
-    lastGhost.x = ghostPen.x; lastGhost.y = ghostPen.y;
-  }
+  pen.x = mouse.x; pen.y = mouse.y;
+  lastPen.x = pen.x; lastPen.y = pen.y;
+  ghostPen.x = pen.x; ghostPen.y = pen.y;
+  lastGhost.x = ghostPen.x; lastGhost.y = ghostPen.y;
 }
-
-// タッチでも確実に動作するように pointerup/down も追加（必要に応じて）
-resetBtn.addEventListener("touchstart", e => {
-  e.preventDefault();
-  resetAll();
-}, {passive:false});
 
 // ===== 描画 =====
 function draw(){
@@ -280,4 +255,3 @@ draw();
 </script>
 </body>
 </html>
-
