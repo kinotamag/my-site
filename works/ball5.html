@@ -128,8 +128,19 @@ function playSnare(){
 
 // ===== リセットボタン =====
 document.getElementById("resetBtn").addEventListener("click",()=>{
-  trail=[]; ghostTrail=[];
+  // 軌跡リセット
+  trail = [];
+  ghostTrail = [];
+
+  // 粒子初期化
   initParticles();
+
+  // ペン位置を現在のマウス/タッチ座標にリセット
+  pen.x = mouse.x; pen.y = mouse.y;
+  lastPen.x = pen.x; lastPen.y = pen.y;
+
+  ghostPen.x = pen.x; ghostPen.y = pen.y;
+  lastGhost.x = ghostPen.x; lastGhost.y = ghostPen.y;
 });
 
 // ===== 描画 =====
