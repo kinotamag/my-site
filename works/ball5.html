@@ -1,257 +1,73 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>LIQUID COLLAGE FIELD</title>
 <style>
-html,body{
-    margin:0;
-    padding:0;
-    overflow:hidden;
-    background:#000;
+body {
+  margin: 0;
+  overflow: hidden;
+  background: white;
 }
-canvas{
-    display:block;
-    touch-action:none;
-}
+canvas { display: block; }
 </style>
 </head>
 <body>
+<canvas id="canvas"></canvas>
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script>
-/* ================= CORE ================= */
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(devicePixelRatio);
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.15;
-document.body.appendChild(renderer.domElement);
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x000000,0.00025);
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-const camera=new THREE.PerspectiveCamera(80,innerWidth/innerHeight,0.1,20000);
-camera.position.z=600;
+let mouse = { x: canvas.width/2, y: canvas.height/2 };
+let pen = { x: mouse.x, y: mouse.y };
+let lastPen = { x: pen.x, y: pen.y };
 
-/* ================= LIGHT ================= */
-scene.add(new THREE.AmbientLight(0xffffff,0.6));
-const dl=new THREE.DirectionalLight(0xffffff,3);
-dl.position.set(800,1200,600);
-scene.add(dl);
+const ease = 0.25;   // 慣性（小さいほど遅れる）
+const maxWidth = 30;
+const minWidth = 1;
 
-/* ================= TIME ================= */
-const clock=new THREE.Clock();
+window.addEventListener("mousemove", e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
 
-/* ================= BALLS ================= */
-const BALLS=[];
-const sphereGeo=new THREE.SphereGeometry(1,48,48);
+function draw() {
 
-const BALL_COUNT=520;
+  // 仮想ペンがマウスに追従
+  pen.x += (mouse.x - pen.x) * ease;
+  pen.y += (mouse.y - pen.y) * ease;
 
-for(let i=0;i<BALL_COUNT;i++){
-    const mat=new THREE.MeshPhysicalMaterial({
-        color:new THREE.Color().setHSL(Math.random(),0.8,0.6),
-        roughness:0.15,
-        metalness:0.7,
-        transmission:0.35,
-        thickness:10,
-        clearcoat:1,
-        clearcoatRoughness:0.05,
-        emissive:new THREE.Color().setHSL(Math.random(),0.9,0.4),
-        emissiveIntensity:0.6
-    });
+  // 本当の速度を計算
+  const dx = pen.x - lastPen.x;
+  const dy = pen.y - lastPen.y;
+  const speed = Math.sqrt(dx*dx + dy*dy);
 
-    const b=new THREE.Mesh(sphereGeo,mat);
-    const scale=12+Math.random()*40;
-    b.scale.setScalar(scale);
+  // 速度→線幅（速いほど細い）
+  let width = maxWidth - speed * 2;
+  if (width < minWidth) width = minWidth;
 
-    b.position.set(
-        (Math.random()-0.5)*4200,
-        (Math.random()-0.5)*4200,
-        (Math.random()-0.5)*4200
-    );
+  ctx.beginPath();
+  ctx.moveTo(lastPen.x, lastPen.y);
+  ctx.lineTo(pen.x, pen.y);
+  ctx.lineCap = "round";
+  ctx.lineWidth = width;
+  ctx.strokeStyle = "black";
+  ctx.stroke();
 
-    b.userData={
-        base:scale,
-        phase:Math.random()*Math.PI*2,
-        drift:new THREE.Vector3(
-            (Math.random()-0.5)*2,
-            (Math.random()-0.5)*2,
-            (Math.random()-0.5)*2
-        ),
-        liquid:new THREE.Vector3(
-            Math.random()*0.8,
-            Math.random()*0.8,
-            Math.random()*0.8
-        ),
-        mood:Math.random()
-    };
+  lastPen.x = pen.x;
+  lastPen.y = pen.y;
 
-    scene.add(b);
-    BALLS.push(b);
+  requestAnimationFrame(draw);
 }
 
-/* ================= LIQUID VEIL ================= */
-const liquidGeo=new THREE.PlaneGeometry(9000,9000,64,64);
-const liquidMat=new THREE.ShaderMaterial({
-    transparent:true,
-    uniforms:{
-        uTime:{value:0}
-    },
-    vertexShader:`
-        uniform float uTime;
-        varying vec2 vUv;
-        void main(){
-            vUv=uv;
-            vec3 pos=position;
-            pos.z+=sin(uv.x*6.0+uTime*0.8)*40.0;
-            pos.z+=cos(uv.y*5.0+uTime*0.6)*40.0;
-            gl_Position=projectionMatrix*modelViewMatrix*vec4(pos,1.0);
-        }
-    `,
-    fragmentShader:`
-        uniform float uTime;
-        varying vec2 vUv;
-        void main(){
-            float g=sin((vUv.x+vUv.y+uTime)*6.0)*0.5+0.5;
-            vec3 col=mix(
-                vec3(0.05,0.1,0.15),
-                vec3(0.3,0.6,0.8),
-                g
-            );
-            gl_FragColor=vec4(col,0.08);
-        }
-    `
-});
-const liquid=new THREE.Mesh(liquidGeo,liquidMat);
-liquid.rotation.x=-Math.PI/2;
-liquid.position.y=-200;
-scene.add(liquid);
+draw();
 
-/* ================= MINIMAL THREADS ================= */
-const THREADS=[];
-const THREAD_MAX=120;
-const threadMat=new THREE.LineBasicMaterial({
-    color:0xffffff,
-    transparent:true,
-    opacity:0.15
-});
-
-for(let i=0;i<THREAD_MAX;i++){
-    const a=BALLS[Math.random()*BALLS.length|0];
-    const b=BALLS[Math.random()*BALLS.length|0];
-    if(a===b) continue;
-    const geo=new THREE.BufferGeometry().setFromPoints([
-        a.position.clone(),
-        b.position.clone()
-    ]);
-    const line=new THREE.Line(geo,threadMat.clone());
-    line.userData={a,b,life:Math.random()*10};
-    scene.add(line);
-    THREADS.push(line);
-}
-
-/* ================= INPUT ================= */
-let yaw=0,pitch=0,drag=false,px=0,py=0;
-let grabbed=null;
-const raycaster=new THREE.Raycaster();
-const mouse=new THREE.Vector2();
-
-addEventListener("pointerdown",e=>{
-    drag=true;px=e.clientX;py=e.clientY;
-    mouse.x=e.clientX/innerWidth*2-1;
-    mouse.y=-(e.clientY/innerHeight)*2+1;
-    raycaster.setFromCamera(mouse,camera);
-    const hit=raycaster.intersectObjects(BALLS,false);
-    if(hit.length) grabbed=hit[0].object;
-});
-
-addEventListener("pointerup",()=>{drag=false;grabbed=null});
-
-addEventListener("pointermove",e=>{
-    if(drag && !grabbed){
-        yaw-=(e.clientX-px)*0.0018;
-        pitch-=(e.clientY-py)*0.0018;
-        pitch=Math.max(-1.4,Math.min(1.4,pitch));
-        px=e.clientX;py=e.clientY;
-    }
-    if(grabbed){
-        mouse.x=e.clientX/innerWidth*2-1;
-        mouse.y=-(e.clientY/innerHeight)*2+1;
-        raycaster.setFromCamera(mouse,camera);
-        grabbed.position.copy(
-            raycaster.ray.origin.add(
-                raycaster.ray.direction.clone().multiplyScalar(500)
-            )
-        );
-    }
-});
-
-/* ================= LOOP ================= */
-function loop(){
-    requestAnimationFrame(loop);
-    const d=clock.getDelta();
-    const t=clock.elapsedTime;
-
-    camera.rotation.set(pitch,yaw,0);
-
-    liquidMat.uniforms.uTime.value=t;
-
-    for(const b of BALLS){
-        if(b===grabbed) continue;
-        const u=b.userData;
-        u.phase+=d*(0.5+u.mood*2.0);
-
-        b.position.x+=Math.sin(t*u.liquid.x+u.phase)*u.drift.x*4;
-        b.position.y+=Math.cos(t*u.liquid.y+u.phase)*u.drift.y*4;
-        b.position.z+=Math.sin(t*u.liquid.z+u.phase)*u.drift.z*4;
-
-        const s=u.base*(1+Math.sin(u.phase)*0.35);
-        b.scale.setScalar(s);
-
-        if(Math.random()<0.0004){
-            b.material.emissiveIntensity=2.5;
-        }else{
-            b.material.emissiveIntensity*=0.98;
-        }
-
-        if(b.position.length()>7000){
-            b.position.multiplyScalar(-0.25);
-        }
-    }
-
-    for(const l of THREADS){
-        l.userData.life-=d;
-        if(l.userData.life<0){
-            l.userData.a=BALLS[Math.random()*BALLS.length|0];
-            l.userData.b=BALLS[Math.random()*BALLS.length|0];
-            l.userData.life=6+Math.random()*10;
-        }
-        const p=l.geometry.attributes.position.array;
-        p[0]=l.userData.a.position.x;
-        p[1]=l.userData.a.position.y;
-        p[2]=l.userData.a.position.z;
-        p[3]=l.userData.b.position.x;
-        p[4]=l.userData.b.position.y;
-        p[5]=l.userData.b.position.z;
-        l.geometry.attributes.position.needsUpdate=true;
-        l.material.opacity=0.05+Math.abs(Math.sin(t*0.6))*0.2;
-    }
-
-    camera.fov=80+Math.sin(t*1.5)*12;
-    camera.updateProjectionMatrix();
-
-    renderer.render(scene,camera);
-}
-loop();
-
-/* ================= RESIZE ================= */
-addEventListener("resize",()=>{
-    camera.aspect=innerWidth/innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth,innerHeight);
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 });
 </script>
 </body>
