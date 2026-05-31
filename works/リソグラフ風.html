@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>Risograph Simulator Pro — リソグラフ風デザイン変換</title>
+  <style>
+    :root {
+      --paper: #faf7f2;
+      --card-bg: #fffefb;
+      --text: #2c2c2c;
+      --text-secondary: #6b6b6b;
+      --accent: #ff48b0;
+      --accent2: #ffe800;
+      --accent3: #0078ff;
+      --border: #e6dfd1;
+      --shadow: 0 2px 16px rgba(0,0,0,0.06);
+      --radius: 14px;
+      --radius-sm: 10px;
+      --font-sans: 'Inter','Helvetica Neue','Noto Sans JP','Hiragino Sans',system-ui,sans-serif;
+      --font-mono: 'SF Mono','Cascadia Code','Consolas','Monaco',monospace;
+      --transition: 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background-color: #f5f2ea;
+      background-image: radial-gradient(ellipse at 15% 25%, rgba(255,72,176,0.04) 0%, transparent 55%), radial-gradient(ellipse at 85% 65%, rgba(0,120,255,0.04) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, rgba(255,232,0,0.02) 0%, transparent 60%);
+      font-family: var(--font-sans); color: var(--text); min-height: 100vh;
+      display: flex; justify-content: center; align-items: flex-start; padding: 16px;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    .container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: clamp(16px,2.5vw,28px); padding: clamp(4px,1vw,12px); }
+    .header { text-align: center; padding: clamp(12px,2vw,20px) 0 0; }
+    .header h1 { font-size: clamp(1.5rem,4vw,2.4rem); font-weight:700; letter-spacing:-0.03em; color:var(--text); display:flex; align-items:center; justify-content:center; gap:clamp(6px,1.5vw,12px); flex-wrap:wrap; }
+    .header .dot { display:inline-block; width:clamp(10px,2vw,15px); height:clamp(10px,2vw,15px); border-radius:50%; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+    .dot.pink { background:#ff48b0; } .dot.yellow { background:#ffe800; } .dot.blue { background:#0078ff; }
+    .header .subtitle { font-size:clamp(0.75rem,1.8vw,0.95rem); color:var(--text-secondary); margin-top:6px; letter-spacing:0.04em; font-weight:400; }
+    .main-grid { display:grid; grid-template-columns:1fr 1fr; gap:clamp(16px,2.5vw,28px); align-items:start; }
+    @media (max-width:900px) { .main-grid { grid-template-columns:1fr; max-width:600px; margin:0 auto; width:100%; } }
+    .card { background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:clamp(14px,2.5vw,24px); box-shadow:var(--shadow); display:flex; flex-direction:column; gap:clamp(12px,2vw,18px); transition:box-shadow var(--transition); }
+    .card:hover { box-shadow:0 8px 30px rgba(0,0,0,0.08); }
+    .card-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-secondary); font-weight:700; opacity:0.8; }
+    .upload-area { border:2px dashed var(--border); border-radius:var(--radius-sm); padding:clamp(24px,5vw,40px) clamp(16px,3vw,24px); text-align:center; cursor:pointer; transition:all var(--transition); background:#fefdf9; min-height:clamp(140px,25vw,190px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(6px,1.5vw,10px); position:relative; overflow:hidden; user-select:none; touch-action:manipulation; }
+    .upload-area:hover,.upload-area.drag-over { border-color:var(--accent); background:#fff5fa; box-shadow:inset 0 0 0 5px rgba(255,72,176,0.04); }
+    .upload-area.drag-over { border-style:solid; background:#fff0f7; }
+    .upload-icon { font-size:clamp(2.5rem,6vw,3.5rem); opacity:0.55; pointer-events:none; transition:transform var(--transition); }
+    .upload-area:hover .upload-icon,.upload-area:active .upload-icon { transform:translateY(-5px); opacity:0.75; }
+    .upload-text { font-size:clamp(0.85rem,2vw,0.95rem); color:var(--text-secondary); pointer-events:none; font-weight:500; }
+    .upload-hint { font-size:clamp(0.7rem,1.5vw,0.78rem); color:#aaa; pointer-events:none; }
+    .upload-area input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; font-size:0; }
+    .canvas-wrapper { position:relative; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:#f9f6ef; background-image:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(0,0,0,0.012) 3px,rgba(0,0,0,0.012) 6px); aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; min-height:180px; }
+    @media (max-width:600px) { .canvas-wrapper { aspect-ratio:1/1; } }
+    .canvas-wrapper canvas { display:block; max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; border-radius:4px; }
+    .placeholder-text { color:#ccc; font-size:clamp(0.8rem,2vw,0.95rem); text-align:center; padding:20px; user-select:none; pointer-events:none; }
+    .processing-overlay { position:absolute; inset:0; background:rgba(255,254,251,0.75); display:flex; align-items:center; justify-content:center; border-radius:var(--radius-sm); z-index:5; pointer-events:none; opacity:0; transition:opacity 0.25s; }
+    .processing-overlay.active { opacity:1; }
+    .processing-box { display:flex; align-items:center; gap:10px; background:#fffefb; padding:12px 22px; border-radius:24px; box-shadow:0 4px 20px rgba(0,0,0,0.1); font-weight:600; font-size:0.85rem; color:var(--text); }
+    .spinner { display:inline-block; width:20px; height:20px; border:2.5px solid rgba(58,58,58,0.2); border-top-color:#3a3a3a; border-radius:50%; animation:spin 0.7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .controls-group { display:flex; flex-direction:column; gap:clamp(10px,1.8vw,16px); }
+    .control-row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+    .control-row label { font-size:clamp(0.75rem,1.6vw,0.85rem); font-weight:600; color:var(--text); min-width:65px; letter-spacing:0.02em; flex-shrink:0; }
+    .control-row input[type="range"] { flex:1; min-width:80px; -webkit-appearance:none; height:8px; border-radius:4px; background:#e8e0d4; outline:none; cursor:pointer; touch-action:pan-y; }
+    .control-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:clamp(22px,4vw,26px); height:clamp(22px,4vw,26px); border-radius:50%; background:#fff; border:2px solid var(--accent); cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,0.12); transition:border-color 0.2s,transform 0.15s; }
+    .control-row input[type="range"]::-webkit-slider-thumb:hover { border-color:#ff1493; transform:scale(1.05); }
+    .control-row input[type="range"]::-webkit-slider-thumb:active { transform:scale(0.95); }
+    .control-value { font-size:clamp(0.7rem,1.4vw,0.8rem); font-weight:600; color:var(--text-secondary); min-width:36px; text-align:right; font-family:var(--font-mono); flex-shrink:0; }
+    .preset-container { width:100%; }
+    .preset-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:#ccc transparent; padding-bottom:4px; touch-action:pan-x; }
+    .preset-scroll::-webkit-scrollbar { height:5px; } .preset-scroll::-webkit-scrollbar-thumb { background:#ccc; border-radius:5px; }
+    .preset-buttons { display:flex; gap:8px; flex-wrap:nowrap; }
+    @media (min-width:901px) { .preset-scroll { overflow-x:visible; padding-bottom:0; } .preset-buttons { flex-wrap:wrap; } }
+    .preset-btn { padding:clamp(6px,1.2vw,9px) clamp(10px,2vw,15px); border-radius:22px; border:1.5px solid var(--border); background:#fffefb; cursor:pointer; font-size:clamp(0.7rem,1.5vw,0.82rem); font-weight:600; letter-spacing:0.02em; transition:all var(--transition); display:flex; align-items:center; gap:6px; color:var(--text); white-space:nowrap; flex-shrink:0; -webkit-tap-highlight-color:transparent; touch-action:manipulation; min-height:38px; }
+    .preset-btn:hover { border-color:#ccc; background:#fafaf7; } .preset-btn.active { border-color:var(--accent); background:#fff5fa; color:#d63384; box-shadow:0 0 0 4px rgba(255,72,176,0.06); }
+    .preset-dot { width:clamp(8px,1.6vw,11px); height:clamp(8px,1.6vw,11px); border-radius:50%; display:inline-block; flex-shrink:0; box-shadow:0 0 0 1px rgba(0,0,0,0.05); }
+    .color-picker-row { display:flex; align-items:center; gap:clamp(8px,1.5vw,14px); flex-wrap:wrap; background:#faf8f2; border-radius:var(--radius-sm); padding:clamp(10px,1.8vw,14px); border:1px solid var(--border); }
+    .color-picker-item { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1 1 auto; min-width:50px; }
+    .color-picker-item label { font-size:clamp(0.6rem,1.3vw,0.72rem); font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; }
+    input[type="color"] { -webkit-appearance:none; width:clamp(32px,7vw,40px); height:clamp(32px,7vw,40px); border-radius:50%; border:2px solid var(--border); cursor:pointer; padding:0; background:none; transition:border-color 0.2s,transform 0.15s; -webkit-tap-highlight-color:transparent; }
+    input[type="color"]:hover { border-color:#999; transform:scale(1.05); } input[type="color"]:active { transform:scale(0.95); }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding:0; } input[type="color"]::-webkit-color-swatch { border-radius:50%; border:none; }
+    .btn { padding:clamp(8px,1.6vw,12px) clamp(14px,2.5vw,20px); border-radius:26px; border:none; cursor:pointer; font-size:clamp(0.78rem,1.6vw,0.88rem); font-weight:700; letter-spacing:0.03em; transition:all var(--transition); display:inline-flex; align-items:center; gap:6px; justify-content:center; text-decoration:none; white-space:nowrap; -webkit-tap-highlight-color:transparent; touch-action:manipulation; min-height:44px; min-width:44px; }
+    @media (min-width:901px) { .btn { min-height:38px; min-width:38px; } }
+    .btn-primary { background:#3a3a3a; color:#fff; box-shadow:0 2px 10px rgba(0,0,0,0.15); } .btn-primary:hover { background:#1a1a1a; box-shadow:0 6px 20px rgba(0,0,0,0.25); transform:translateY(-2px); } .btn-primary:active { transform:translateY(0); }
+    .btn-outline { background:#fffefb; color:var(--text); border:1.5px solid var(--border); } .btn-outline:hover { border-color:#bbb; background:#fafaf7; } .btn-outline:active { background:#f0ede4; }
+    .btn-accent { background:var(--accent); color:#fff; box-shadow:0 2px 10px rgba(255,72,176,0.35); } .btn-accent:hover { background:#e8389a; box-shadow:0 6px 22px rgba(255,72,176,0.45); transform:translateY(-2px); } .btn-accent:active { transform:translateY(0); }
+    .btn-small { padding:clamp(7px,1.2vw,9px) clamp(12px,2vw,16px); font-size:clamp(0.7rem,1.4vw,0.8rem); min-height:36px; }
+    .btn-row { display:flex; flex-wrap:wrap; gap:clamp(6px,1.2vw,10px); align-items:center; }
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120px); background:#3a3a3a; color:#fff; padding:clamp(10px,2vw,14px) clamp(18px,4vw,28px); border-radius:30px; font-size:clamp(0.78rem,1.6vw,0.9rem); font-weight:600; letter-spacing:0.03em; z-index:999; opacity:0; transition:all 0.4s cubic-bezier(0.4,0,0.2,1); pointer-events:none; box-shadow:0 10px 30px rgba(0,0,0,0.25); white-space:nowrap; max-width:90vw; text-align:center; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1><span class="dot pink"></span>Risograph<span class="dot yellow"></span>Simulator<span class="dot blue"></span></h1>
+    <p class="subtitle">写真をリソグラフ風グラフィックデザインに変換（ナチュラル版）</p>
+  </div>
+  <div class="main-grid">
+    <div class="card" id="uploadCard">
+      <span class="card-label">📷 元画像</span>
+      <div class="upload-area" id="uploadArea">
+        <span class="upload-icon">🖼️</span>
+        <span class="upload-text">タップまたはドロップで選択</span>
+        <span class="upload-hint">JPG / PNG / WebP / HEIC</span>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      <div class="canvas-wrapper" id="originalWrapper">
+        <canvas id="originalCanvas" style="display:none;"></canvas>
+        <span class="placeholder-text" id="originalPlaceholder">ここに元画像が表示されます</span>
+      </div>
+    </div>
+    <div class="card" id="resultCard">
+      <span class="card-label">🎨 変換結果（リソグラフ風）</span>
+      <div class="canvas-wrapper" id="resultWrapper" style="position:relative;">
+        <canvas id="resultCanvas" style="display:none;"></canvas>
+        <span class="placeholder-text" id="resultPlaceholder">画像をアップロードしてください</span>
+        <div class="processing-overlay" id="processingOverlay">
+          <div class="processing-box"><div class="spinner"></div><span>処理中...</span></div>
+        </div>
+      </div>
+      <div class="controls-group" id="controlsPanel" style="display:none;">
+        <div class="control-row">
+          <label>🎨 プリセット</label>
+          <div class="preset-container"><div class="preset-scroll"><div class="preset-buttons" id="presetButtons"></div></div></div>
+        </div>
+        <div class="color-picker-row" id="customColorRow">
+          <div class="color-picker-item"><label>インク1</label><input type="color" id="colorPicker1" value="#ff48b0"></div>
+          <div class="color-picker-item"><label>インク2</label><input type="color" id="colorPicker2" value="#ffe800"></div>
+          <div class="color-picker-item"><label>インク3</label><input type="color" id="colorPicker3" value="#0078ff"></div>
+          <button class="btn btn-outline btn-small" id="randomColorBtn">🎲 ランダム配色</button>
+        </div>
+        <div class="control-row">
+          <label>🔵 網点 size</label>
+          <input type="range" id="dotSizeSlider" min="4" max="16" value="8" step="0.5"><span class="control-value" id="dotSizeValue">8px</span>
+        </div>
+        <div class="control-row">
+          <label>🫧 ドット歪み</label>
+          <input type="range" id="distortionSlider" min="0" max="100" value="10" step="1"><span class="control-value" id="distortionValue">10%</span>
+        </div>
+        <div class="control-row">
+          <label>🫀 にじみ</label>
+          <input type="range" id="bleedSlider" min="0" max="100" value="15" step="1"><span class="control-value" id="bleedValue">15%</span>
+        </div>
+        <div class="control-row">
+          <label>📐 ズレ</label>
+          <input type="range" id="misregSlider" min="0" max="5" value="1" step="0.5"><span class="control-value" id="misregValue">1px</span>
+        </div>
+        <div class="control-row">
+          <label>🌀 ズレ性格</label>
+          <input type="range" id="misregStyleSlider" min="0" max="100" value="30" step="1"><span class="control-value" id="misregStyleValue">30%</span>
+        </div>
+        <div class="control-row">
+          <label>🔵 スクリーン密度</label>
+          <input type="range" id="lpiSlider" min="20" max="100" value="60" step="1"><span class="control-value" id="lpiValue">60</span>
+        </div>
+        <div class="control-row">
+          <label>📄 質感</label>
+          <input type="range" id="textureSlider" min="0" max="60" value="20" step="1"><span class="control-value" id="textureValue">20%</span>
+        </div>
+        <div class="control-row">
+          <label>☀️ 明るさ</label>
+          <input type="range" id="brightnessSlider" min="-30" max="30" value="0" step="1"><span class="control-value" id="brightnessValue">0</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-accent" id="downloadBtn">⬇ ダウンロード</button>
+          <button class="btn btn-outline" id="randomShiftBtn">🎲 ランダムズレ</button>
+          <button class="btn btn-outline" id="resetBtn">↺ リセット</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  (function() {
+    const fileInput = document.getElementById('fileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const originalCanvas = document.getElementById('originalCanvas');
+    const originalPlaceholder = document.getElementById('originalPlaceholder');
+    const resultCanvas = document.getElementById('resultCanvas');
+    const resultPlaceholder = document.getElementById('resultPlaceholder');
+    const processingOverlay = document.getElementById('processingOverlay');
+    const controlsPanel = document.getElementById('controlsPanel');
+    const presetButtons = document.getElementById('presetButtons');
+    const dotSizeSlider = document.getElementById('dotSizeSlider');
+    const distortionSlider = document.getElementById('distortionSlider');
+    const bleedSlider = document.getElementById('bleedSlider');
+    const misregSlider = document.getElementById('misregSlider');
+    const misregStyleSlider = document.getElementById('misregStyleSlider');
+    const lpiSlider = document.getElementById('lpiSlider');
+    const textureSlider = document.getElementById('textureSlider');
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const dotSizeValue = document.getElementById('dotSizeValue');
+    const distortionValue = document.getElementById('distortionValue');
+    const bleedValue = document.getElementById('bleedValue');
+    const misregValue = document.getElementById('misregValue');
+    const misregStyleValue = document.getElementById('misregStyleValue');
+    const lpiValue = document.getElementById('lpiValue');
+    const textureValue = document.getElementById('textureValue');
+    const brightnessValue = document.getElementById('brightnessValue');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const randomShiftBtn = document.getElementById('randomShiftBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const toast = document.getElementById('toast');
+    const colorPicker1 = document.getElementById('colorPicker1');
+    const colorPicker2 = document.getElementById('colorPicker2');
+    const colorPicker3 = document.getElementById('colorPicker3');
+    const randomColorBtn = document.getElementById('randomColorBtn');
+
+    let uploadedImage = null;
+    let currentPresetIndex = 0;
+    let currentColors = [];
+    let currentAngles = [15, 0, 75];
+    let worker = null;
+    let debounceTimer = null;
+    const DEBOUNCE_MS = 200;
+    const PROCESS_WIDTH = 900;
+
+    const colorPresets = [
+      { name:'クラシック', colors:[{hex:'#ff48b0',r:255,g:72,b:176},{hex:'#ffe800',r:255,g:232,b:0},{hex:'#0078ff',r:0,g:120,b:255}], angles:[15,0,75] },
+      { name:'ウォーム', colors:[{hex:'#ff6b35',r:255,g:107,b:53},{hex:'#ff48b0',r:255,g:72,b:176},{hex:'#ffe800',r:255,g:232,b:0}], angles:[15,45,0] },
+      { name:'クール', colors:[{hex:'#0078ff',r:0,g:120,b:255},{hex:'#00c896',r:0,g:200,b:150},{hex:'#7b5ea7',r:123,g:94,b:167}], angles:[15,45,75] },
+      { name:'レトロ', colors:[{hex:'#e63946',r:230,g:57,b:70},{hex:'#ffe800',r:255,g:232,b:0},{hex:'#1d3557',r:29,g:53,b:87}], angles:[15,0,75] },
+      { name:'ネオン', colors:[{hex:'#39ff14',r:57,g:255,b:20},{hex:'#ff48b0',r:255,g:72,b:176},{hex:'#8a2be2',r:138,g:43,b:226}], angles:[15,45,0] },
+      { name:'ビンテージ', colors:[{hex:'#704214',r:112,g:66,b:20},{hex:'#808000',r:128,g:128,b:0},{hex:'#008080',r:0,g:128,b:128}], angles:[0,30,60] },
+      { name:'パステル', colors:[{hex:'#ffb6c1',r:255,g:182,b:193},{hex:'#ffffe0',r:255,g:255,b:224},{hex:'#add8e6',r:173,g:216,b:230}], angles:[0,15,30] },
+      { name:'ボールド', colors:[{hex:'#ff0000',r:255,g:0,b:0},{hex:'#ffff00',r:255,g:255,b:0},{hex:'#000000',r:0,g:0,b:0}], angles:[15,0,75] },
+      { name:'サンセット', colors:[{hex:'#ff7f50',r:255,g:127,b:80},{hex:'#ffd700',r:255,g:215,b:0},{hex:'#4b0082',r:75,g:0,b:130}], angles:[15,45,75] },
+      { name:'フォレスト', colors:[{hex:'#006400',r:0,g:100,b:0},{hex:'#32cd32',r:50,g:205,b:50},{hex:'#8b4513',r:139,g:69,b:19}], angles:[0,45,15] },
+      { name:'オーシャン', colors:[{hex:'#00ffff',r:0,g:255,b:255},{hex:'#00008b',r:0,g:0,b:139},{hex:'#87ceeb',r:135,g:206,b:235}], angles:[15,0,75] },
+      { name:'ベリー', colors:[{hex:'#e30b5d',r:227,g:11,b:93},{hex:'#4a0045',r:74,g:0,b:69},{hex:'#fffdd0',r:255,g:253,b:208}], angles:[15,45,75] }
+    ];
+
+    function buildPresetButtons() {
+      presetButtons.innerHTML = '';
+      colorPresets.forEach((preset, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.dataset.index = idx;
+        btn.innerHTML = preset.colors.map(c => `<span class="preset-dot" style="background:${c.hex};"></span>`).join('') + preset.name;
+        presetButtons.appendChild(btn);
+      });
+    }
+    buildPresetButtons();
+
+    function applyColors(colors, angles, presetIndex) {
+      currentColors = colors.map(c => ({...c}));
+      currentAngles = angles.slice();
+      currentPresetIndex = presetIndex;
+      colorPicker1.value = colors[0].hex;
+      colorPicker2.value = colors[1].hex;
+      colorPicker3.value = colors[2].hex;
+      document.querySelectorAll('.preset-btn').forEach((btn, i) => btn.classList.toggle('active', i === presetIndex));
+      scheduleReprocess();
+    }
+
+    function selectPreset(index) {
+      const p = colorPresets[index];
+      applyColors(p.colors, p.angles, index);
+    }
+
+    function applyCustomFromPickers() {
+      const c1 = hexToRgb(colorPicker1.value);
+      const c2 = hexToRgb(colorPicker2.value);
+      const c3 = hexToRgb(colorPicker3.value);
+      applyColors([c1, c2, c3], [15,0,75], -1);
+    }
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if (!result) return {r:0,g:0,b:0,hex:'#000000'};
+      return {r: parseInt(result[1],16), g: parseInt(result[2],16), b: parseInt(result[3],16), hex: hex};
+    }
+
+    function randomColor() {
+      const r = Math.floor(Math.random()*256), g = Math.floor(Math.random()*256), b = Math.floor(Math.random()*256);
+      return {r,g,b,hex:'#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)};
+    }
+    function randomizeColors() {
+      applyColors([randomColor(), randomColor(), randomColor()], [15,0,75], -1);
+      showToast('ランダム配色を適用しました 🎲');
+    }
+
+    function getParams() {
+      return {
+        dotSize: parseFloat(dotSizeSlider.value),
+        distortion: parseInt(distortionSlider.value) / 100,
+        bleed: parseInt(bleedSlider.value) / 100,
+        misreg: parseFloat(misregSlider.value),
+        misregStyle: parseInt(misregStyleSlider.value) / 100,
+        lpi: parseInt(lpiSlider.value) / 100,
+        textureStrength: parseInt(textureSlider.value) / 100,
+        brightness: parseInt(brightnessSlider.value),
+        colors: currentColors,
+        angles: currentAngles,
+      };
+    }
+
+    function updateUIValues() {
+      dotSizeValue.textContent = dotSizeSlider.value + 'px';
+      distortionValue.textContent = distortionSlider.value + '%';
+      bleedValue.textContent = bleedSlider.value + '%';
+      misregValue.textContent = misregSlider.value + 'px';
+      misregStyleValue.textContent = misregStyleSlider.value + '%';
+      lpiValue.textContent = lpiSlider.value;
+      textureValue.textContent = textureSlider.value + '%';
+      brightnessValue.textContent = (parseInt(brightnessSlider.value) >= 0 ? '+' : '') + brightnessSlider.value;
+    }
+
+    // Web Worker (ナチュラル版：不自然なノイズ除去)
+    function createWorker() {
+      const workerCode = `
+        self.onmessage = function(e) {
+          const { imageData, params, pw, ph } = e.data;
+          const pixels = new Uint8ClampedArray(imageData);
+          const result = processImage(pixels, pw, ph, params);
+          self.postMessage({ imageData: result }, [result.buffer]);
+        };
+
+        function processImage(pixels, pw, ph, params) {
+          if (params.brightness !== 0) {
+            for (let i = 0; i < pixels.length; i += 4) {
+              pixels[i] = clamp(pixels[i] + params.brightness, 0, 255);
+              pixels[i+1] = clamp(pixels[i+1] + params.brightness, 0, 255);
+              pixels[i+2] = clamp(pixels[i+2] + params.brightness, 0, 255);
+            }
+          }
+
+          const layers = params.colors.map((colorDef, idx) => {
+            const intensityMap = new Float32Array(pw * ph);
+            const angle = params.angles[idx] * Math.PI / 180;
+            for (let y = 0; y < ph; y++) {
+              for (let x = 0; x < pw; x++) {
+                const i = (y * pw + x) * 4;
+                const r = pixels[i], g = pixels[i+1], b = pixels[i+2];
+                const cmy = { c: 1 - r/255, m: 1 - g/255, y: 1 - b/255 };
+                const intensity = getInkIntensity(r, g, b, colorDef, cmy);
+                intensityMap[y * pw + x] = clamp(intensity, 0, 1);
+              }
+            }
+            return { colorDef, intensityMap, angle };
+          });
+
+          const outCanvas = new OffscreenCanvas(pw, ph);
+          const outCtx = outCanvas.getContext('2d');
+          outCtx.fillStyle = '#f8f4ec';
+          outCtx.fillRect(0, 0, pw, ph);
+
+          for (let l = 0; l < layers.length; l++) {
+            const layer = layers[l];
+            const layerCanvas = createHalftoneLayer(layer.intensityMap, pw, ph, layer.colorDef, layer.angle, params, l);
+            outCtx.globalCompositeOperation = 'multiply';
+            outCtx.drawImage(layerCanvas, 0, 0);
+          }
+          outCtx.globalCompositeOperation = 'source-over';
+
+          if (params.textureStrength > 0.001) {
+            addPaperTexture(outCtx, pw, ph, params.textureStrength);
+          }
+
+          return outCtx.getImageData(0, 0, pw, ph).data;
+        }
+
+        function getInkIntensity(r, g, b, colorDef, cmy) {
+          const cr = colorDef.r/255, cg = colorDef.g/255, cb = colorDef.b/255;
+          const absR = 1-cr, absG = 1-cg, absB = 1-cb;
+          const total = absR+absG+absB;
+          if (total < 0.01) return 0;
+          const wC = absR/total, wM = absG/total, wY = absB/total;
+          return Math.min(1, (wC*cmy.c + wM*cmy.m + wY*cmy.y) * 1.3);
+        }
+
+        function createHalftoneLayer(intensityMap, pw, ph, colorDef, angle, params, layerIdx) {
+          const canvas = new OffscreenCanvas(pw, ph);
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pw, ph);
+
+          const effectiveDotSize = params.dotSize * (0.7 + params.lpi * 0.6);
+          const cosA = Math.cos(angle), sinA = Math.sin(angle);
+          const maxRadius = effectiveDotSize * 0.75;
+          const margin = effectiveDotSize * 2;
+          const diag = Math.sqrt(pw*pw + ph*ph) + margin*2;
+          const cx = pw/2, cy = ph/2;
+          const stepX = effectiveDotSize * cosA, stepY = effectiveDotSize * sinA;
+          const stepX2 = -effectiveDotSize * sinA, stepY2 = effectiveDotSize * cosA;
+          const nSteps = Math.ceil(diag / effectiveDotSize) + 2;
+
+          ctx.fillStyle = colorDef.hex;
+          const dots = [];
+          const rand = seededRandom(layerIdx * 1000 + 42);
+
+          for (let i = -nSteps; i <= nSteps; i++) {
+            for (let j = -nSteps; j <= nSteps; j++) {
+              let gx = cx + i * stepX + j * stepX2;
+              let gy = cy + i * stepY + j * stepY2;
+
+              const misreg = params.misreg;
+              const style = params.misregStyle;
+              const baseOff = [(layerIdx%3===0)?0:(layerIdx%3===1?misreg*0.7:-misreg*0.5), (layerIdx%3===0)?0:(layerIdx%3===1?-misreg*0.5:misreg*0.8)];
+              const jitterX = (rand() - 0.5) * misreg * style * 2;
+              const jitterY = (rand() - 0.5) * misreg * style * 2;
+              const sx = gx + baseOff[0] + jitterX;
+              const sy = gy + baseOff[1] + jitterY;
+
+              let intensity = 0;
+              const ix = Math.round(sx), iy = Math.round(sy);
+              if (ix >= 0 && ix < pw && iy >= 0 && iy < ph) intensity = intensityMap[iy * pw + ix];
+              else if (ix >= -effectiveDotSize && ix < pw+effectiveDotSize && iy >= -effectiveDotSize && iy < ph+effectiveDotSize) {
+                intensity = intensityMap[clamp(iy,0,ph-1) * pw + clamp(ix,0,pw-1)];
+              }
+              if (intensity < 0.005) continue;
+
+              let radius = intensity * maxRadius;
+              radius += params.bleed * maxRadius * 0.5 * (rand() - 0.5);
+              if (radius < 0.3) continue;
+
+              const distort = params.distortion;
+              let rx = radius, ry = radius;
+              if (distort > 0.01) {
+                const factor = 1 + (rand() - 0.5) * distort * 1.2;
+                rx *= factor;
+                ry *= (2 - factor) * 0.8 + 0.2;
+              }
+
+              if (gx < -maxRadius*2 || gx > pw+maxRadius*2 || gy < -maxRadius*2 || gy > ph+maxRadius*2) continue;
+              dots.push({ x: sx, y: sy, rx: Math.max(0.2, rx), ry: Math.max(0.2, ry), angle: rand() * Math.PI * distort });
+            }
+          }
+
+          ctx.beginPath();
+          for (const d of dots) {
+            ctx.save();
+            ctx.translate(d.x, d.y);
+            if (d.rx !== d.ry) ctx.rotate(d.angle || 0);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, d.rx, d.ry, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+          }
+          return canvas;
+        }
+
+        function addPaperTexture(ctx, pw, ph, strength) {
+          const imgData = ctx.getImageData(0, 0, pw, ph);
+          const data = imgData.data;
+          for (let y = 0; y < ph; y++) {
+            for (let x = 0; x < pw; x++) {
+              const i = (y * pw + x) * 4;
+              const grain = (hashXY(x, y) - 0.5) * strength * 40;
+              const fiber = (hashXY(Math.floor(x*0.04), Math.floor(y*0.04)) - 0.5) * strength * 30;
+              const noise = grain + fiber;
+              data[i] = clamp(data[i] + noise, 0, 255);
+              data[i+1] = clamp(data[i+1] + noise, 0, 255);
+              data[i+2] = clamp(data[i+2] + noise, 0, 255);
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        }
+
+        function seededRandom(seed) {
+          return function() {
+            seed = (seed * 16807) % 2147483647;
+            return (seed - 1) / 2147483646;
+          };
+        }
+
+        function hashXY(x, y) {
+          let h = (x * 374761393 + y * 668265263 + 1274126177) | 0;
+          h = ((h >> 16) ^ h) * 0x45d9f3b;
+          h = ((h >> 16) ^ h) * 0x45d9f3b;
+          h = (h >> 16) ^ h;
+          return (h & 0x7fffffff) / 0x7fffffff;
+        }
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      `;
+
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      return new Worker(URL.createObjectURL(blob));
+    }
+
+    worker = createWorker();
+    worker.onmessage = function(e) {
+      const { imageData } = e.data;
+      if (resultCanvas.width && resultCanvas.height) {
+        const ctx = resultCanvas.getContext('2d');
+        const imgData = new ImageData(new Uint8ClampedArray(imageData), resultCanvas.width, resultCanvas.height);
+        ctx.putImageData(imgData, 0, 0);
+      }
+      processingOverlay.classList.remove('active');
+    };
+
+    function scheduleReprocess() {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (uploadedImage) processImage();
+      }, DEBOUNCE_MS);
+    }
+
+    function processImage() {
+      if (!uploadedImage || !worker) return;
+      processingOverlay.classList.add('active');
+
+      const img = uploadedImage;
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(PROCESS_WIDTH / w, 1);
+      const pw = Math.round(w * scale), ph = Math.round(h * scale);
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = pw; tempCanvas.height = ph;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(img, 0, 0, pw, ph);
+      const imageData = tempCtx.getImageData(0, 0, pw, ph);
+
+      resultCanvas.width = pw; resultCanvas.height = ph;
+      resultCanvas.style.display = 'block';
+      resultPlaceholder.style.display = 'none';
+
+      const params = getParams();
+      worker.postMessage({
+        imageData: imageData.data.buffer,
+        params: params,
+        pw: pw,
+        ph: ph
+      }, [imageData.data.buffer]);
+    }
+
+    function displayOriginal(img) {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(PROCESS_WIDTH / w, 600 / h, 1);
+      const dw = Math.round(w * scale), dh = Math.round(h * scale);
+      originalCanvas.width = dw; originalCanvas.height = dh;
+      const ctx = originalCanvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, dw, dh);
+      originalCanvas.style.display = 'block';
+      originalPlaceholder.style.display = 'none';
+    }
+
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) { showToast('画像ファイルを選択してください'); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          uploadedImage = img;
+          displayOriginal(img);
+          controlsPanel.style.display = 'flex';
+          resultPlaceholder.style.display = 'none';
+          scheduleReprocess();
+          showToast('画像を読み込みました✨');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    fileInput.addEventListener('change', (e) => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+    uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('drag-over'); });
+    uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('drag-over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+    dotSizeSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+    distortionSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+    bleedSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+    misregSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+    misregStyleSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+    lpiSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+    textureSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+    brightnessSlider.addEventListener('input', () => { updateUIValues(); scheduleReprocess(); });
+
+    presetButtons.addEventListener('click', (e) => {
+      const btn = e.target.closest('.preset-btn');
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.index);
+      if (!isNaN(idx) && idx >=0 && idx < colorPresets.length) selectPreset(idx);
+    });
+    colorPicker1.addEventListener('input', applyCustomFromPickers);
+    colorPicker2.addEventListener('input', applyCustomFromPickers);
+    colorPicker3.addEventListener('input', applyCustomFromPickers);
+    randomColorBtn.addEventListener('click', randomizeColors);
+
+    randomShiftBtn.addEventListener('click', () => {
+      misregSlider.value = (Math.random()*4+0.5).toFixed(1);
+      updateUIValues();
+      scheduleReprocess();
+      showToast('ランダムズレ: '+misregSlider.value+'px');
+    });
+
+    resetBtn.addEventListener('click', () => {
+      dotSizeSlider.value = 8;
+      distortionSlider.value = 10;
+      bleedSlider.value = 15;
+      misregSlider.value = 1;
+      misregStyleSlider.value = 30;
+      lpiSlider.value = 60;
+      textureSlider.value = 20;
+      brightnessSlider.value = 0;
+      updateUIValues();
+      selectPreset(0);
+      showToast('設定をリセットしました');
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if (!resultCanvas.width) { showToast('まず画像を処理してください'); return; }
+      const link = document.createElement('a');
+      link.download = 'risograph_'+Date.now()+'.png';
+      link.href = resultCanvas.toDataURL('image/png');
+      link.click();
+      showToast('ダウンロードしました📥');
+    });
+
+    let toastTimer;
+    function showToast(msg) {
+      if(toastTimer) clearTimeout(toastTimer);
+      toast.textContent = msg;
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    updateUIValues();
+    selectPreset(0);
+  })();
+</script>
+</body>
+</html>

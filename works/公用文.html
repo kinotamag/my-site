@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公用文 構造チェッカー v4.6（優先度別修正・Undo/Redo）</title>
+    <style>
+        :root {
+            --p1-bg: #fecaca; --p1-border: #ef4444; --p1-hover: #fca5a5;
+            --p2-bg: #fed7aa; --p2-border: #f97316; --p2-hover: #fdba74;
+            --p3-bg: #fef08a; --p3-border: #eab308; --p3-hover: #fde047;
+            --surface: #fff; --bg: #f4f5f7; --text: #1e293b; --accent: #3b82f6; --success: #10b981; --radius: 12px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI','游ゴシック',YuGothic,'Hiragino Kaku Gothic ProN',Meiryo,sans-serif; line-height: 1.8; background: var(--bg); padding: 1.5rem; color: #333; }
+        .container { max-width: 1350px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+        .panel { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; flex-direction: column; min-height: 680px; }
+        h2 { margin: 0 0 0.6rem; font-weight: 600; color: var(--text); border-bottom: 3px solid var(--accent); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 1.1rem; }
+        .mode-switch { margin-left: auto; display: flex; gap: 0.3rem; font-size: 12px; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; flex-shrink: 0; }
+        .mode-switch button { padding: 0.35rem 0.8rem; border: none; background: #f8fafc; cursor: pointer; font-size: 12px; color: #64748b; transition: 0.2s; }
+        .mode-switch button.active { background: var(--accent); color: #fff; font-weight: 700; }
+        textarea { width: 100%; flex: 1; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1rem; font-size: 16px; line-height: 1.9; resize: vertical; font-family: 'UD Digi Kyokasho NK-R','游明朝',serif; background: #fafbfc; min-height: 280px; }
+        #output {
+            flex: 1; background: #fafbfc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; overflow-y: auto;
+            font-family: 'UD Digi Kyokasho NK-R','游明朝',serif; line-height: 2.1; min-height: 280px; white-space: pre-wrap;
+            outline: none; transition: border-color 0.2s;
+        }
+        #output[contenteditable="true"] { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); cursor: text; }
+        .editable-notice { font-size: 11px; color: #64748b; margin-top: 0.3rem; display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+        .editable-notice .dot { width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        .marker-p1 { background: var(--p1-bg); border-bottom: 2px dashed var(--p1-border); cursor: pointer; padding: 0 3px; border-radius: 3px; transition: background 0.2s, box-shadow 0.2s; }
+        .marker-p1:hover { background: var(--p1-hover); box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+        .marker-p1.fixable { animation: pulse-p1 2s infinite; }
+        @keyframes pulse-p1 { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3);} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0);} }
+        .marker-p2 { background: var(--p2-bg); border-bottom: 2px dashed var(--p2-border); cursor: pointer; padding: 0 3px; border-radius: 3px; transition: background 0.2s; }
+        .marker-p2:hover { background: var(--p2-hover); box-shadow: 0 0 0 3px rgba(249,115,22,0.15); }
+        .marker-p3 { background: var(--p3-bg); border-bottom: 2px dashed var(--p3-border); cursor: pointer; padding: 0 3px; border-radius: 3px; transition: background 0.2s; }
+        .marker-p3:hover { background: var(--p3-hover); box-shadow: 0 0 0 3px rgba(234,179,8,0.15); }
+        .marker-foreign-ok { background: #dbeafe; border-bottom: 2px dotted #3b82f6; cursor: pointer; padding: 0 3px; border-radius: 3px; }
+        .marker-foreign-caution { background: #fef3c7; border-bottom: 2px dotted #f59e0b; cursor: pointer; padding: 0 3px; border-radius: 3px; }
+        .marker-foreign-ng { background: #fecaca; border-bottom: 2px dotted #ef4444; cursor: pointer; padding: 0 3px; border-radius: 3px; }
+        .tooltip-popup { display: none; position: fixed; background: #1e293b; color: #fff; padding: 1rem; border-radius: 10px; font-size: 13px; max-width: 380px; z-index: 1000; box-shadow: 0 15px 35px rgba(0,0,0,0.35); pointer-events: auto; line-height: 1.6; border: 1px solid #334155; }
+        .tooltip-popup .fix-btn { display: inline-block; margin-top: 0.6rem; padding: 0.4rem 1rem; background: #ef4444; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+        .tooltip-popup .fix-btn:hover { filter: brightness(1.2); }
+        .tooltip-popup .foreign-tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 0.4rem; text-transform: uppercase; }
+        .foreign-tag.ok { background: #3b82f6; color: #fff; } .foreign-tag.caution { background: #f59e0b; color: #1e293b; } .foreign-tag.ng { background: #ef4444; color: #fff; }
+        .score-dashboard { display: flex; align-items: center; gap: 1.2rem; padding: 0.8rem 1.2rem; background: #f8fafc; border-radius: 10px; margin-bottom: 0.8rem; flex-wrap: wrap; border: 1px solid #e2e8f0; flex-shrink: 0; }
+        .score-gauge { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
+        .score-gauge svg { transform: rotate(-90deg); }
+        .score-gauge .bg-circle { fill: none; stroke: #e2e8f0; stroke-width: 8; }
+        .score-gauge .fg-circle { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.6s, stroke 0.4s; }
+        .score-value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: var(--text); }
+        .score-label { font-size: 13px; font-weight: 600; color: #475569; line-height: 1.3; }
+        .score-label .verdict { font-size: 15px; font-weight: 700; display: block; }
+        .verdict.good { color: #10b981; } .verdict.warn { color: #f97316; } .verdict.danger { color: #ef4444; }
+        .dashboard-actions { margin-left: auto; display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+        .btn-group { display: flex; gap: 0.8rem; margin-top: 1rem; flex-wrap: wrap; flex-shrink: 0; }
+        button { background: var(--accent); color: #fff; border: none; font-size: 14px; font-weight: 600; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: filter 0.2s; }
+        button:hover { filter: brightness(1.15); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+        .btn-secondary { background: #64748b; } .btn-copy { background: var(--success); }
+        .btn-p1 { background: #ef4444; }
+        .btn-p2 { background: #f97316; }
+        .btn-p3 { background: #eab308; color: #1e293b; }
+        .btn-undo, .btn-redo { background: #6b7280; font-size: 13px; padding: 0.4rem 0.8rem; }
+        .btn-recheck { background: #8b5cf6; }
+        .footer-note { margin-top: 0.8rem; font-size: 13px; color: #64748b; text-align: right; min-height: 1.5em; flex-shrink: 0; }
+        .legend { font-size: 12px; margin-bottom: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap; flex-shrink: 0; }
+        .legend .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+        .dot-p1 { background: var(--p1-bg); border: 1px solid var(--p1-border); }
+        .dot-p2 { background: var(--p2-bg); border: 1px solid var(--p2-border); }
+        .dot-p3 { background: var(--p3-bg); border: 1px solid var(--p3-border); }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .score-dashboard { flex-direction: column; align-items: flex-start; } .dashboard-actions { margin-left: 0; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="panel">
+        <h2>📥 変換前の文章</h2>
+        <textarea id="input" placeholder="ここに文章を貼り付けてください">お世話になっております。本件については、関係各所との調整を適切に行いつつ、必要に応じて速やかに対応するものとし、状況に応じて柔軟に処理することといたします。申請者におかれましては、事前に必要書類などをご準備のうえ、あらかじめ内容をご確認いただき、提出期限までにご提出くださいますようお願い申し上げます。なお、申請内容に不備がある場合には、担当部署において確認を行い、必要に応じて申請者へご連絡差し上げるとともに、状況によっては再提出をお願いする場合がございます。また、本事業は原則として令和8年4月1日から開始予定であり、社会情勢そのほかの事情により変更となる可能性があります。利用可能な施設数は約二十程度を予定しておりますが、申込状況その他の要因により増減する場合があります。またまた、必要に応じて関係者間で協議を行い、適宜適切に対応することとし、その判断については担当者の裁量に委ねるものといたします。本事業は、地域における文化芸術活動の推進に資することを目的とするものであり、アウトリーチ活動や内容の管理、枠組み全体の運用設計なども含む包括的な取り組みといたします。ご不明点はメールまたは電話にてご連絡いただけますと幸いです。</textarea>
+        <div class="btn-group">
+            <button id="convertBtn">✨ 公用文に変換・チェック</button>
+            <button id="clearBtn" class="btn-secondary">クリア</button>
+        </div>
+        <div class="rule-log" id="ruleLog">⚡ 変換ルール・構造チェック結果が表示されます。</div>
+    </div>
+    <div class="panel">
+        <h2>✅ 変換結果（編集できます）
+            <span class="mode-switch" id="modeSwitch">
+                <button data-mode="concise" class="active">簡潔</button>
+                <button data-mode="strict">厳格</button>
+                <button data-mode="preserve">原文維持</button>
+            </span>
+        </h2>
+        <div class="score-dashboard">
+            <div class="score-gauge"><svg width="64" height="64" viewBox="0 0 64 64"><circle class="bg-circle" cx="32" cy="32" r="28"/><circle class="fg-circle" id="fgCircle" cx="32" cy="32" r="28" stroke-dasharray="175.93" stroke-dashoffset="175.93"/></svg><div class="score-value" id="scoreValue">0</div></div>
+            <div class="score-label"><span>統合スコア</span><span class="verdict good" id="verdictText">良好</span></div>
+            <div class="dashboard-actions">
+                <button class="btn-p1" id="fixP1Btn" title="P1（最優先）項目をすべて自動修正">🔧 P1修正</button>
+                <button class="btn-p2" id="fixP2Btn" title="P2（推奨）項目をすべて自動修正">🔧 P2修正</button>
+                <button class="btn-p3" id="fixP3Btn" title="P3（任意）項目をすべて自動修正">🔧 P3修正</button>
+                <button class="btn-undo" id="undoBtn" title="元に戻す" disabled>↩ 戻す</button>
+                <button class="btn-redo" id="redoBtn" title="やり直し" disabled>↪ 進む</button>
+                <button class="btn-recheck" id="recheckBtn">🔄 再チェック</button>
+            </div>
+        </div>
+        <div class="legend">
+            <span><span class="dot dot-p1"></span>P1最優先</span>
+            <span><span class="dot dot-p2"></span>P2推奨</span>
+            <span><span class="dot dot-p3"></span>P3任意</span>
+            <span><span class="dot" style="background:#dbeafe;border:1px solid #3b82f6;"></span>外来OK</span>
+            <span><span class="dot" style="background:#fef3c7;border:1px solid #f59e0b;"></span>注意</span>
+            <span><span class="dot" style="background:#fecaca;border:1px solid #ef4444;"></span>NG</span>
+        </div>
+        <div id="output" contenteditable="true">（変換結果がここに表示されます）</div>
+        <div class="editable-notice"><span class="dot"></span> 直接編集できます。編集後は「再チェック」で再評価されます。</div>
+        <div class="btn-group">
+            <button id="copyBtn" class="btn-copy">📋 変換テキストをコピー</button>
+        </div>
+        <div class="footer-note" id="copyFeedback"></div>
+    </div>
+</div>
+<div id="tooltip" class="tooltip-popup"></div>
+
+<script>
+(function() {
+    // ============ 統一された外来語・用語レジストリ ============
+    const termRegistry = {
+        'アウトリーチ':   { type:'foreign', category:'ok', suggestion:'訪問支援（文化政策では原語維持可）', note:'制度用語として定着' },
+        'コンテンツ':     { type:'foreign', category:'ok', suggestion:'内容（IT文脈では原語維持可）', note:'広く定着した外来語' },
+        'リソース':       { type:'foreign', category:'ok', suggestion:'資源・人員', note:'ビジネス用語として定着' },
+        'アジェンダ':     { type:'foreign', category:'caution', suggestion:'議題', note:'「議題」で十分な場合が多い' },
+        'スキーム':       { type:'foreign', category:'caution', suggestion:'枠組み・計画', note:'「枠組み」への言い換えを推奨' },
+        'コンセンサス':   { type:'foreign', category:'caution', suggestion:'合意', note:'「合意」で十分' },
+        'マネジメント':   { type:'foreign', category:'caution', suggestion:'管理・運営（文化政策では「アートマネジメント」等の定着あり）', note:'文脈により原語が適切な場合あり' },
+        'エビデンス':     { type:'foreign', category:'ng', suggestion:'根拠・証拠', note:'「根拠」への言い換えを強く推奨' },
+        'ガバナンス':     { type:'foreign', category:'ng', suggestion:'統治・管理体制', note:'日本語化を強く推奨' },
+    };
+
+    // ============ 設定 ============
+    const ambiguityWeights = {
+        '必要に応じて':1.5, '可能な限り':1, '適宜':1, '速やかに':1, '適切に':1,
+        '原則として':1.5, '柔軟に':1, '別途':0.5, '現時点では':0.5, '状況に応じて':1, '状況によっては':1,
+    };
+    const subjectKeywords = [
+        '担当者','事務局','申請者','利用者','当課','当部署','係','市','町','村',
+        '国','機関','委員','本部','チーム','実施主体','関係者','各担当者','担当部署',
+        '所管','主管課','運営主体','主催者','センター','指定管理者','文化会館','協議会','委員会','本部','財団','社団',
+    ];
+
+    // ============ ルール定義 ============
+    const rules = [
+        { id: 'r001', search: /いたすこととし(?!ます)/g, replace: 'いたします', note: '法令調ミックス。「いたします」に', priority: 1 },
+        { id: 'r002', search: /することとし(?!ます)/g, replace: 'します', note: '冗長。「します」に', priority: 1 },
+        { id: 'r003', search: /するものとし(?!ます)/g, replace: 'します', note: '法令調。一般文書では「します」に', priority: 1 },
+        { id: 'r004', search: /するものといたします/g, replace: 'いたします', note: '冗長な言い回し', priority: 1 },
+        { id: 'r005', search: /することといたします/g, replace: 'いたします', note: '同上', priority: 1 },
+        { id: 'r006', search: /判断するものといたします/g, replace: '判断します', note: '簡潔化', priority: 1 },
+        { id: 'r007', search: /委ねるものといたします/g, replace: '委ねます', note: '簡潔化', priority: 1 },
+        { id: 'r008', search: /決定するものといたします/g, replace: '決定します', note: '簡潔化', priority: 1 },
+        { id: 'r009', search: /整理するものといたします/g, replace: '整理します', note: '簡潔化', priority: 1 },
+        { id: 'r010', search: /いたす場合がございます/g, replace: 'いたします', note: '簡潔化', priority: 1 },
+        { id: 'r011', search: /またまた/g, replace: 'また', note: '重複', priority: 1 },
+        { id: 'r012', search: /おかれましては/g, replace: null, note: '古い公文調ですが、敬意表現として残す選択もあります', priority: 2, markerOnly: true },
+        { id: 'r013', search: /させて頂きます/g, replace: 'いたします', note: '過剰敬語→「いたします」', priority: 2 },
+        { id: 'r014', search: /させていただきます/g, replace: 'いたします', note: '同上', priority: 2 },
+        { id: 'r015', search: /させて頂く/g, replace: 'いたす', note: '同上', priority: 2 },
+        { id: 'r016', search: /させていただく/g, replace: 'いたす', note: '同上', priority: 2 },
+        { id: 'r017', search: /させて頂き/g, replace: 'いたし', note: '同上', priority: 2 },
+        { id: 'r018', search: /させていただき/g, replace: 'いたし', note: '同上', priority: 2 },
+        { id: 'r019', search: /ご連絡差し上げ(る|ます)/g, replace: null, note: '「ご連絡します」で十分ですが、外部通知では許容されます', priority: 2, markerOnly: true },
+        { id: 'r020', search: /ご確認いただけますようお願い申し上げます/g, replace: 'ご確認ください', note: '簡潔依頼', priority: 2 },
+        { id: 'r021', search: /ご理解のほどよろしくお願いいたします/g, replace: 'ご理解ください', note: '簡潔化', priority: 2 },
+        { id: 'r022', search: /ご理解くださいますようお願いいたします/g, replace: 'ご理解ください', note: '簡潔化', priority: 2 },
+        { id: 'r023', search: /担当者の方/g, replace: '担当者', note: '過剰敬称「方」', priority: 2 },
+        { id: 'r024', search: /利用者の方/g, replace: '利用者', note: '同上', priority: 2 },
+        { id: 'r025', search: /申請者の方/g, replace: '申請者', note: '同上', priority: 2 },
+        { id: 'r026', search: /することができます/g, replace: 'できます', note: '簡潔化', priority: 2 },
+        { id: 'r027', search: /申し上げます/g, replace: null, note: '「お願い申し上げます」等は定型句として許容。多用に注意', priority: 3, markerOnly: true },
+        { id: 'r028', search: /御中/g, replace: null, note: '「御中」は過剰敬称の可能性', priority: 2, markerOnly: true },
+        { id: 'r029', search: /して頂(き|く|け|い)/g, replace: 'していただ$1', note: '「頂く」→「いただく」', priority: 3 },
+        { id: 'r030', search: /して下さい/g, replace: 'してください', note: '「ください」は仮名', priority: 3 },
+        { id: 'r031', search: /致します/g, replace: 'いたします', note: '「致します」→仮名', priority: 3 },
+        { id: 'r032', search: /致す/g, replace: 'いたす', note: '「致す」→仮名', priority: 3 },
+        { id: 'r033', search: /出来(ます|る)/g, replace: 'でき$1', note: '「出来」→仮名', priority: 3 },
+        { id: 'r034', search: /して居(る|ない)/g, replace: 'してい$1', note: '「居る」→「いる」', priority: 3 },
+        { id: 'r035', search: /有(る|った)/g, replace: 'あ$1', note: '「有」→仮名', priority: 3 },
+        { id: 'r036', search: /無い/g, replace: 'ない', note: '「無い」→「ない」', priority: 3 },
+        { id: 'r037', search: /その他(?!の|事項|要因|要)/g, replace: 'そのほか', note: '「その他」→「そのほか」', priority: 3 },
+        { id: 'r038', search: /の物/g, replace: 'のもの', note: '「物」→「もの」', priority: 3 },
+        { id: 'r039', search: /の様/g, replace: 'のよう', note: '「様」→「よう」', priority: 3 },
+        { id: 'r040', search: /の為/g, replace: 'のため', note: '「為」→「ため」', priority: 3 },
+        { id: 'r041', search: /の通り/g, replace: 'のとおり', note: '「通り」→「とおり」', priority: 3 },
+        { id: 'r042', search: /既に/g, replace: 'すでに', note: '副詞は仮名', priority: 3 },
+        { id: 'r043', search: /様々/g, replace: 'さまざま', note: '「様々」→仮名', priority: 3 },
+        { id: 'r044', search: /又は/g, replace: 'または', note: '「又は」→仮名', priority: 3 },
+        { id: 'r045', search: /若しくは/g, replace: 'もしくは', note: '仮名', priority: 3 },
+        { id: 'r046', search: /及び/g, replace: 'および', note: '仮名', priority: 3 },
+        { id: 'r047', search: /並びに/g, replace: 'ならびに', note: '仮名', priority: 3 },
+        { id: 'r048', search: /尚/g, replace: 'なお', note: '仮名', priority: 3 },
+        { id: 'r049', search: /但し/g, replace: 'ただし', note: '仮名', priority: 3 },
+        { id: 'r050', search: /全て/g, replace: 'すべて', note: '仮名', priority: 3 },
+        { id: 'r051', search: /更に/g, replace: 'さらに', note: '仮名', priority: 3 },
+        { id: 'r052', search: /直ぐに/g, replace: 'すぐに', note: '仮名', priority: 3 },
+        { id: 'r053', search: /先ず/g, replace: 'まず', note: '仮名', priority: 3 },
+        { id: 'r054', search: /御連絡/g, replace: 'ご連絡', note: '接頭辞「御」→「ご」', priority: 3 },
+        { id: 'r055', search: /御利用/g, replace: 'ご利用', note: '同上', priority: 3 },
+        { id: 'r056', search: /御確認/g, replace: 'ご確認', note: '同上', priority: 3 },
+        { id: 'r057', search: /御案内/g, replace: 'ご案内', note: '同上', priority: 3 },
+        { id: 'r058', search: /御不明/g, replace: 'ご不明', note: '同上', priority: 3 },
+        { id: 'r059', search: /御願い/g, replace: 'お願い', note: '「御願い」→「お願い」', priority: 3 },
+        { id: 'r060', search: /御理解/g, replace: 'ご理解', note: '同上', priority: 3 },
+        { id: 'r061', search: /御承知/g, replace: 'ご承知', note: '同上', priority: 3 },
+        { id: 'r062', search: /御座います/g, replace: 'ございます', note: '「御座います」→「ございます」', priority: 3 },
+        { id: 'r063', search: /行なう/g, replace: '行う', note: '送り仮名統一', priority: 3 },
+        { id: 'r064', search: /受付ける/g, replace: '受け付ける', note: '送り仮名統一', priority: 3 },
+        { id: 'r065', search: /問合せる/g, replace: '問い合わせる', note: '送り仮名統一', priority: 3 },
+        { id: 'r066', search: /取扱う/g, replace: '取り扱う', note: '送り仮名統一', priority: 3 },
+        { id: 'r067', search: /等(?!級|価|分|比|速|高|低|数|量|質)/g, replace: 'など', note: '「等」→「など」', priority: 3 },
+        { id: 'r068', search: /且つ/g, replace: 'かつ', note: '「且つ」→「かつ」', priority: 3 },
+        { id: 'r069', search: /([0-9]+)ヶ月/g, replace: '$1か月', note: '「か月」に統一', priority: 3 },
+        { id: 'r070', search: /([0-9]+)ヵ月/g, replace: '$1か月', note: '同上', priority: 3 },
+        { id: 'r071', search: /([0-9]+)カ月/g, replace: '$1か月', note: '同上', priority: 3 },
+        { id: 'r072', search: /約二十程度/g, replace: null, note: '「約」と「程度」が重複しています。「20程度」または「約20」に', priority: 3, markerOnly: true },
+        { id: 'r073', search: /一人(?!一人)/g, replace: null, note: '「1人」にできますが、「一人一人」などの表現はそのまま', priority: 3, markerOnly: true },
+        { id: 'r074', search: /二件/g, replace: '2件', note: '算用数字', priority: 3 },
+        { id: 'r075', search: /午前([一二三四五六七八九十]+)時/g, replace: (_,p)=>'午前'+kanjiToNum(p)+'時', note: '算用数字', priority: 3 },
+        { id: 'r076', search: /午後([一二三四五六七八九十]+)時/g, replace: (_,p)=>'午後'+kanjiToNum(p)+'時', note: '同上', priority: 3 },
+        { id: 'r077', search: /令和([一二三四五六七八九十]+)年/g, replace: (_,p)=>'令和'+kanjiToNum(p)+'年', note: '算用数字', priority: 3 },
+        { id: 'r078', search: /必要に応じて/g, replace: null, note: '行政文書で常用されますが、条件を明示するとより明確', priority: 3, isAmbiguous: true },
+        { id: 'r079', search: /可能な限り/g, replace: null, note: '範囲が不明瞭です', priority: 3, isAmbiguous: true },
+        { id: 'r080', search: /適宜/g, replace: null, note: '基準を具体的に', priority: 3, isAmbiguous: true },
+        { id: 'r081', search: /速やかに/g, replace: null, note: '可能であれば期限を明示（例：○営業日以内）', priority: 3, isAmbiguous: true },
+        { id: 'r082', search: /適切に/g, replace: null, note: '基準を明示すると親切', priority: 3, isAmbiguous: true },
+        { id: 'r083', search: /原則として/g, replace: null, note: '例外条件を明記できるなら明記', priority: 3, isAmbiguous: true },
+        { id: 'r084', search: /柔軟に/g, replace: null, note: '裁量の目安を示せるとより良い', priority: 3, isAmbiguous: true },
+        { id: 'r085', search: /内容の管理/g, replace: null, note: '「管理業務」など具体化を検討', priority: 3 },
+        { id: 'r086', search: /合意形成/g, replace: null, note: '「合意」で十分な場合が多い', priority: 3 },
+        { id: 'r087', search: /アウトリーチ/g, replace: null, isForeign: true, foreignKey: 'アウトリーチ', priority: 3 },
+        { id: 'r088', search: /コンテンツ/g, replace: null, isForeign: true, foreignKey: 'コンテンツ', priority: 3 },
+        { id: 'r089', search: /リソース/g, replace: null, isForeign: true, foreignKey: 'リソース', priority: 3 },
+        { id: 'r090', search: /アジェンダ/g, replace: null, isForeign: true, foreignKey: 'アジェンダ', priority: 3 },
+        { id: 'r091', search: /スキーム/g, replace: null, isForeign: true, foreignKey: 'スキーム', priority: 3 },
+        { id: 'r092', search: /コンセンサス/g, replace: null, isForeign: true, foreignKey: 'コンセンサス', priority: 3 },
+        { id: 'r093', search: /マネジメント/g, replace: null, isForeign: true, foreignKey: 'マネジメント', priority: 3 },
+        { id: 'r094', search: /エビデンス/g, replace: null, isForeign: true, foreignKey: 'エビデンス', priority: 3 },
+        { id: 'r095', search: /ガバナンス/g, replace: null, isForeign: true, foreignKey: 'ガバナンス', priority: 3 },
+    ];
+
+    function kanjiToNum(k) { const m={一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,二十:20,三十:30}; return m[k]||k; }
+    function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escapeAttr(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    let currentMode = 'concise';
+    let activeMarkerMap = new Map();
+
+    // ============ 履歴管理 ============
+    const MAX_HISTORY = 50;
+    let undoStack = [];
+    let redoStack = [];
+
+    function pushHistory(text) {
+        if (undoStack.length > 0 && undoStack[undoStack.length - 1] === text) return;
+        undoStack.push(text);
+        if (undoStack.length > MAX_HISTORY) undoStack.shift();
+        redoStack = [];
+        updateUndoRedoButtons();
+    }
+
+    function undo() {
+        if (undoStack.length === 0) return;
+        const current = inputEl.value;
+        redoStack.push(current);
+        const prev = undoStack.pop();
+        inputEl.value = prev;
+        updateUndoRedoButtons();
+        convert();
+    }
+
+    function redo() {
+        if (redoStack.length === 0) return;
+        const current = inputEl.value;
+        undoStack.push(current);
+        const next = redoStack.pop();
+        inputEl.value = next;
+        updateUndoRedoButtons();
+        convert();
+    }
+
+    function updateUndoRedoButtons() {
+        document.getElementById('undoBtn').disabled = undoStack.length === 0;
+        document.getElementById('redoBtn').disabled = redoStack.length === 0;
+    }
+
+    // ============ セグメントベースレンダリング ============
+    function collectAllMatches(text, mode) {
+        const all = [];
+        rules.forEach(rule => {
+            const flags = rule.search.flags || 'g';
+            const regex = new RegExp(rule.search.source, flags);
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const original = match[0];
+                let replacement = original;
+                const shouldReplace = (mode === 'preserve') ? false : (mode === 'strict' ? rule.priority === 1 : rule.priority <= 2);
+                if (rule.isForeign || rule.markerOnly) { replacement = original; }
+                else if (shouldReplace && rule.replace !== null) {
+                    replacement = (typeof rule.replace === 'function') ? rule.replace(...match, match.index, text) : rule.replace;
+                } else if (!shouldReplace && rule.replace !== null && !rule.isAmbiguous) { replacement = original; }
+                all.push({
+                    id: rule.id + '_' + match.index,
+                    start: match.index, end: match.index + original.length,
+                    original, replacement, priority: rule.priority,
+                    isForeign: !!rule.isForeign, foreignKey: rule.foreignKey || null,
+                    isAmbiguous: !!rule.isAmbiguous, markerOnly: !!rule.markerOnly,
+                    actuallyReplaced: replacement !== original, rule
+                });
+                if (original.length === 0) break;
+            }
+        });
+        return all;
+    }
+
+    // 優先度だけ指定して強制置換（モード無視）
+    function collectFixesByPriority(text, priority) {
+        const matches = [];
+        rules.filter(r => r.priority === priority && r.replace !== null && !r.markerOnly && !r.isForeign).forEach(rule => {
+            const flags = rule.search.flags || 'g';
+            const regex = new RegExp(rule.search.source, flags);
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const original = match[0];
+                const replacement = (typeof rule.replace === 'function') ? rule.replace(...match, match.index, text) : rule.replace;
+                matches.push({
+                    start: match.index, end: match.index + original.length,
+                    original, replacement, priority: rule.priority,
+                    actuallyReplaced: true, rule
+                });
+                if (original.length === 0) break;
+            }
+        });
+        return matches;
+    }
+
+    function resolveOverlaps(matches) {
+        if (matches.length === 0) return [];
+        matches.sort((a, b) => a.start - b.start || a.priority - b.priority || (b.end - b.start) - (a.end - a.start));
+        const resolved = [];
+        for (const m of matches) {
+            let overlapped = false;
+            for (let i = resolved.length - 1; i >= 0; i--) {
+                const r = resolved[i];
+                if (m.start < r.end && m.end > r.start) {
+                    overlapped = true;
+                    if (m.priority < r.priority || (m.priority === r.priority && (m.end - m.start) > (r.end - r.start))) {
+                        resolved.splice(i, 1, m);
+                    }
+                    break;
+                }
+            }
+            if (!overlapped) resolved.push(m);
+        }
+        return resolved.sort((a, b) => a.start - b.start);
+    }
+
+    function detectMissingSubjects(text) {
+        const missing = [];
+        const sentences = text.split(/[。\n]+/).filter(s => s.trim().length > 0);
+        let pos = 0;
+        for (const s of sentences) {
+            const trimmed = s.trim();
+            if (trimmed.length < 10) { pos = text.indexOf(s, pos) + s.length; continue; }
+            const hasSubj = subjectKeywords.some(kw => trimmed.includes(kw));
+            const actionStart = /^(対応|送付|確認|連絡|提出|実施|管理|運営|いたし|行い|参り|ご連絡|お願い|判断|決定|処理|検討|協議|ご説明)/.test(trimmed) ||
+                /^(本件|これ|それ)について/.test(trimmed) ||
+                /^(なお|ただし|また)、?(対応|送付|確認|連絡|判断)/.test(trimmed);
+            if (actionStart && !hasSubj && !trimmed.match(/状況|結果|ため|場合|とき/)) {
+                const start = text.indexOf(trimmed, pos);
+                if (start !== -1) missing.push({
+                    id: 'subj_' + start,
+                    start, end: start + trimmed.length, original: text.substring(start, start + trimmed.length),
+                    replacement: text.substring(start, start + trimmed.length), priority: 2,
+                    isForeign: false, foreignKey: null, isAmbiguous: false, markerOnly: true,
+                    actuallyReplaced: false, isSubjectMissing: true,
+                    rule: { note: '主語が明示されていません。誰が行うか確認してください', replace: null }
+                });
+            }
+            pos = text.indexOf(s, pos) + s.length;
+        }
+        return missing;
+    }
+
+    function buildSegments(text, resolvedMatches) {
+        const segments = [];
+        let lastPos = 0;
+        for (const m of resolvedMatches) {
+            if (m.start < lastPos) continue;
+            if (m.start > lastPos) {
+                segments.push({ type: 'text', content: text.substring(lastPos, m.start) });
+            }
+            const shouldMark = !m.actuallyReplaced || m.isForeign || m.isAmbiguous || m.markerOnly || (m.rule && m.rule.replace === null) || m.isSubjectMissing;
+            if (shouldMark) {
+                const fp = (m.isForeign && m.foreignKey) ? termRegistry[m.foreignKey] : null;
+                const className = fp ? `marker-foreign-${fp.category}` : `marker-p${m.priority}`;
+                const note = fp
+                    ? `外来語[${fp.category.toUpperCase()}]: ${fp.suggestion}（${fp.note}）`
+                    : (m.isSubjectMissing ? m.rule.note : (m.rule ? m.rule.note : ''));
+                const fixable = m.priority === 1 && m.rule && m.rule.replace !== null && !m.isForeign && !m.markerOnly && !m.isSubjectMissing;
+                const suggestion = fp ? fp.suggestion : (fixable && typeof m.rule.replace === 'string' ? m.rule.replace : null);
+                segments.push({
+                    type: 'marker', content: m.replacement, priority: m.priority,
+                    className, note, fixable, suggestion,
+                    markerId: m.id, origText: m.original
+                });
+            } else {
+                segments.push({ type: 'text', content: m.replacement });
+            }
+            lastPos = m.end;
+        }
+        if (lastPos < text.length) {
+            segments.push({ type: 'text', content: text.substring(lastPos) });
+        }
+        return segments;
+    }
+
+    function segmentsToHTML(segments) {
+        let html = '';
+        for (const seg of segments) {
+            if (seg.type === 'text') {
+                html += escapeHtml(seg.content);
+            } else {
+                const dataAttrs = [
+                    `data-note="${escapeAttr(seg.note)}"`,
+                    `data-priority="${seg.priority}"`,
+                    `data-fixable="${seg.fixable ? '1' : '0'}"`,
+                    `data-suggestion="${escapeAttr(seg.suggestion || '')}"`,
+                    `data-marker-id="${escapeAttr(seg.markerId || '')}"`,
+                    `data-orig-text="${escapeAttr(seg.origText || '')}"`,
+                ].join(' ');
+                html += `<span class="${seg.className}${seg.fixable ? ' fixable' : ''}" ${dataAttrs}>${escapeHtml(seg.content)}</span>`;
+            }
+        }
+        return html;
+    }
+
+    function segmentsToPlainText(segments) {
+        return segments.map(s => s.content).join('');
+    }
+
+    function computeIntegratedScore(text, matches) {
+        let score = 0;
+        const countedTerms = new Set();
+        for (const [term, w] of Object.entries(ambiguityWeights)) {
+            const regex = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                if (!countedTerms.has(match.index + ':' + term)) {
+                    score += w;
+                    countedTerms.add(match.index + ':' + term);
+                }
+            }
+        }
+        const p1Count = matches.filter(m => m.priority === 1 && !m.isSubjectMissing).length;
+        const p2Count = matches.filter(m => m.priority === 2).length;
+        const p3Count = matches.filter(m => m.priority === 3 && !m.isForeign && !m.isAmbiguous).length;
+        const foreignNg = matches.filter(m => m.isForeign && termRegistry[m.foreignKey]?.category === 'ng').length;
+        if (p1Count > 0) score += 5 + (p1Count - 1) * 0.5;
+        score += p2Count * 1;
+        score += p3Count * 0.3;
+        score += foreignNg * 1.5;
+        return Math.round(score * 10) / 10;
+    }
+
+    function getVerdict(score) {
+        if (score <= 5) return { level: '良好', css: 'good', color: '#10b981' };
+        if (score <= 12) return { level: '要修正', css: 'warn', color: '#f97316' };
+        return { level: '危険（P1強制表示）', css: 'danger', color: '#ef4444' };
+    }
+
+    function checkOverCorrection(orig, trans) {
+        const w = [];
+        const hira = (trans.match(/[\u3040-\u309F]/g) || []).length / (trans.length || 1);
+        if (hira > 0.7) w.push(`ひらがな比率${Math.round(hira * 100)}%（読みにくさ注意）`);
+        if (orig.length - trans.length > orig.length * 0.3 && orig.length > 100) w.push(`大幅短縮（過剰修正の可能性）`);
+        return w;
+    }
+
+    function processText(text, mode) {
+        const allMatches = collectAllMatches(text, mode);
+        const resolved = resolveOverlaps(allMatches);
+        const subjMarkers = detectMissingSubjects(text);
+        const allResolved = resolveOverlaps([...resolved, ...subjMarkers]);
+        const segments = buildSegments(text, allResolved);
+        const html = segmentsToHTML(segments);
+        const plainText = segmentsToPlainText(segments);
+        const score = computeIntegratedScore(text, allResolved);
+        const verdict = getVerdict(score);
+        const warnings = checkOverCorrection(text, plainText);
+        activeMarkerMap.clear();
+        for (const seg of segments) {
+            if (seg.type === 'marker' && seg.markerId) {
+                activeMarkerMap.set(seg.markerId, seg);
+            }
+        }
+        return { html, plainText, score, verdict, warnings, allResolved, segments };
+    }
+
+    function applyReplacementsToInput(text, matches) {
+        let result = text;
+        const sorted = [...matches].sort((a, b) => b.start - a.start);
+        for (const m of sorted) {
+            if (m.actuallyReplaced) {
+                result = result.substring(0, m.start) + m.replacement + result.substring(m.end);
+            }
+        }
+        return result;
+    }
+
+    // ============ UI ============
+    const inputEl = document.getElementById('input');
+    const outputEl = document.getElementById('output');
+    const ruleLogEl = document.getElementById('ruleLog');
+    const convertBtn = document.getElementById('convertBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const copyFeedback = document.getElementById('copyFeedback');
+    const fixP1Btn = document.getElementById('fixP1Btn');
+    const fixP2Btn = document.getElementById('fixP2Btn');
+    const fixP3Btn = document.getElementById('fixP3Btn');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const recheckBtn = document.getElementById('recheckBtn');
+    const modeSwitch = document.getElementById('modeSwitch');
+    const tooltip = document.getElementById('tooltip');
+
+    let lastResult = null;
+
+    function render(result) {
+        lastResult = result;
+        outputEl.innerHTML = result.html;
+        const circumference = 175.93;
+        const maxScore = 25;
+        const offset = circumference - (Math.min(result.score, maxScore) / maxScore) * circumference;
+        document.getElementById('fgCircle').setAttribute('stroke-dashoffset', offset);
+        document.getElementById('fgCircle').setAttribute('stroke', result.verdict.color);
+        document.getElementById('scoreValue').textContent = result.score;
+        const vt = document.getElementById('verdictText');
+        vt.textContent = result.verdict.level;
+        vt.className = 'verdict ' + result.verdict.css;
+        let log = `✅ 統合スコア: <b style="color:${result.verdict.color}">${result.score}</b> (${result.verdict.level})<br>`;
+        log += `🔧 モード: ${currentMode === 'concise' ? '簡潔' : currentMode === 'strict' ? '厳格' : '原文維持'}<br>`;
+        const p1c = result.allResolved.filter(m => m.priority === 1).length;
+        const replaced = result.allResolved.filter(m => m.actuallyReplaced).length;
+        log += `📝 P1: ${p1c}件 / 自動修正: ${replaced}件`;
+        if (result.warnings.length) log += `<br>⚠️ ${result.warnings.join(' / ')}`;
+        ruleLogEl.innerHTML = log;
+        copyFeedback.textContent = '';
+        updateUndoRedoButtons();
+    }
+
+    // イベント委任
+    outputEl.addEventListener('mouseover', function(e) {
+        const marker = e.target.closest('span[data-note]');
+        if (!marker) { tooltip.style.display = 'none'; return; }
+        const note = marker.dataset.note;
+        const pri = marker.dataset.priority;
+        const fixable = marker.dataset.fixable === '1';
+        const sug = marker.dataset.suggestion || '';
+        const markerId = marker.dataset.markerId;
+        const origText = marker.dataset.origText;
+        const label = pri === '1' ? '🔴 P1 最優先' : (pri === '2' ? '🟠 P2 推奨' : '🟡 P3 任意');
+        let html = `<strong>${label}</strong><br>${note}`;
+        const isForeign = marker.className.includes('foreign');
+        if (isForeign) {
+            const tagClass = marker.className.includes('foreign-ok') ? 'ok' : (marker.className.includes('foreign-caution') ? 'caution' : 'ng');
+            const tagLabel = tagClass === 'ok' ? 'OK' : (tagClass === 'caution' ? '注意' : 'NG');
+            html = `<span class="foreign-tag ${tagClass}">${tagLabel}</span> ${html}`;
+        }
+        if (fixable && sug && markerId) {
+            html += `<br><button class="fix-btn" data-marker-id="${escapeAttr(markerId)}" data-orig-text="${escapeAttr(origText)}" data-suggestion="${escapeAttr(sug)}">🔧 修正を適用: 「${escapeHtml(sug)}」</button>`;
+        }
+        tooltip.innerHTML = html;
+        tooltip.style.display = 'block';
+        const fixBtn = tooltip.querySelector('.fix-btn');
+        if (fixBtn) {
+            fixBtn.onclick = function(ev) {
+                ev.stopPropagation();
+                const id = this.dataset.markerId;
+                const suggestion = this.dataset.suggestion;
+                applySingleFixById(id, suggestion);
+                tooltip.style.display = 'none';
+            };
+        }
+    });
+    outputEl.addEventListener('mousemove', function(e) {
+        if (tooltip.style.display === 'block') {
+            tooltip.style.left = Math.min(e.clientX + 15, window.innerWidth - 400) + 'px';
+            tooltip.style.top = Math.min(e.clientY + 15, window.innerHeight - 200) + 'px';
+        }
+    });
+    outputEl.addEventListener('mouseleave', function() { tooltip.style.display = 'none'; });
+    outputEl.addEventListener('click', function(e) {
+        const marker = e.target.closest('span[data-fixable="1"]');
+        if (!marker) return;
+        const markerId = marker.dataset.markerId;
+        const suggestion = marker.dataset.suggestion;
+        if (markerId && suggestion) {
+            applySingleFixById(markerId, suggestion);
+            tooltip.style.display = 'none';
+        }
+    });
+
+    function applySingleFixById(markerId, replacement) {
+        const current = inputEl.value;
+        const markerInfo = activeMarkerMap.get(markerId);
+        if (!markerInfo || !markerInfo.origText) return;
+        const targetText = markerInfo.origText;
+        const index = current.indexOf(targetText);
+        if (index === -1) return;
+        const newInput = current.substring(0, index) + replacement + current.substring(index + targetText.length);
+        if (newInput !== current) {
+            pushHistory(current);
+            inputEl.value = newInput;
+            convert();
+            copyFeedback.textContent = '✅ 修正を適用しました';
+            copyFeedback.style.color = '#10b981';
+            setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+        }
+    }
+
+    function applyFixesByPriority(priority) {
+        const current = inputEl.value;
+        const matches = collectFixesByPriority(current, priority);
+        if (matches.length === 0) {
+            copyFeedback.textContent = `ℹ️ 適用可能なP${priority}修正はありませんでした`;
+            copyFeedback.style.color = '#64748b';
+            setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+            return;
+        }
+        const resolved = resolveOverlaps(matches);
+        const newInput = applyReplacementsToInput(current, resolved);
+        if (newInput !== current) {
+            pushHistory(current);
+            inputEl.value = newInput;
+            convert();
+            copyFeedback.textContent = `✅ P${priority}一括修正（${resolved.length}件）`;
+            copyFeedback.style.color = '#10b981';
+            setTimeout(() => { copyFeedback.textContent = ''; }, 2500);
+        } else {
+            copyFeedback.textContent = `ℹ️ P${priority}の修正による変更はありませんでした`;
+            copyFeedback.style.color = '#64748b';
+            setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+        }
+    }
+
+    function recheckFromEditedOutput() {
+        const edited = outputEl.innerText;
+        if (!edited.trim()) return;
+        const current = inputEl.value;
+        if (edited !== current) {
+            pushHistory(current);
+        }
+        inputEl.value = edited;
+        convert();
+        copyFeedback.textContent = '✅ 編集内容を再チェックしました';
+        copyFeedback.style.color = '#10b981';
+        setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+    }
+
+    function convert() {
+        const text = inputEl.value.trim();
+        if (!text) {
+            outputEl.innerHTML = '（変換結果がここに表示されます）';
+            ruleLogEl.innerHTML = '⚡ 変換ルール・構造チェック結果が表示されます。';
+            document.getElementById('fgCircle').setAttribute('stroke-dashoffset', '175.93');
+            document.getElementById('scoreValue').textContent = '0';
+            document.getElementById('verdictText').textContent = '良好';
+            document.getElementById('verdictText').className = 'verdict good';
+            lastResult = null;
+            activeMarkerMap.clear();
+            updateUndoRedoButtons();
+            return;
+        }
+        render(processText(text, currentMode));
+    }
+
+    convertBtn.addEventListener('click', convert);
+    clearBtn.addEventListener('click', () => {
+        inputEl.value = '';
+        outputEl.innerHTML = '（変換結果がここに表示されます）';
+        ruleLogEl.innerHTML = '⚡ 変換ルール・構造チェック結果が表示されます。';
+        document.getElementById('fgCircle').setAttribute('stroke-dashoffset', '175.93');
+        document.getElementById('scoreValue').textContent = '0';
+        document.getElementById('verdictText').textContent = '良好';
+        document.getElementById('verdictText').className = 'verdict good';
+        tooltip.style.display = 'none';
+        lastResult = null;
+        activeMarkerMap.clear();
+        undoStack = [];
+        redoStack = [];
+        updateUndoRedoButtons();
+        copyFeedback.textContent = '';
+    });
+    fixP1Btn.addEventListener('click', () => applyFixesByPriority(1));
+    fixP2Btn.addEventListener('click', () => applyFixesByPriority(2));
+    fixP3Btn.addEventListener('click', () => applyFixesByPriority(3));
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+    recheckBtn.addEventListener('click', recheckFromEditedOutput);
+    modeSwitch.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' && e.target.dataset.mode) {
+            currentMode = e.target.dataset.mode;
+            modeSwitch.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            convert();
+        }
+    });
+    copyBtn.addEventListener('click', async () => {
+        const text = lastResult ? lastResult.plainText : outputEl.innerText;
+        try {
+            await navigator.clipboard.writeText(text);
+            copyFeedback.textContent = '✅ コピーしました！';
+        } catch {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            copyFeedback.textContent = '✅ コピーしました（旧方式）';
+        }
+        copyFeedback.style.color = '#10b981';
+        setTimeout(() => { copyFeedback.textContent = ''; }, 2000);
+    });
+
+    window.addEventListener('DOMContentLoaded', () => { convert(); });
+})();
+</script>
+</body>
+</html>
